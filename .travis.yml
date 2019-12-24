@@ -2,19 +2,35 @@ dist: xenial
 os: linux
 
 language: rust
-rust:
-  - nightly
-  - stable
 cache: cargo
 
 matrix:
+  fast_finish: true
+
   include:
-    - name: "LintFormat"
+    - name: "Stable - LintFormat"
+      rust: stable
       before_script:
         - rustup component add clippy || cargo install --git
           https://github.com/rust-lang/rust-clippy/ --force clippy
         - rustup component add rustfmt
       script: scripts/check lf
 
-    - name: "Test"
+    - name: "Stable - Test"
+      rust: stable
       script: scripts/check test
+
+    - name: "Nightly - LintFormat"
+      rust: nightly
+      before_script:
+        - rustup component add clippy || cargo install --git
+          https://github.com/rust-lang/rust-clippy/ --force clippy
+        - rustup component add rustfmt
+      script: scripts/check lf
+
+    - name: "Nightly - Test"
+      rust: nightly
+      script: scripts/check test
+
+  allow_failures:
+    - rust: nightly
