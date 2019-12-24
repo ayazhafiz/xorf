@@ -1,15 +1,14 @@
 use super::{murmur3::mix64, splitmix64::splitmix64};
 use alloc::{boxed::Box, vec::Vec};
-use core::f64;
 
 #[derive(Default)]
 struct HashSet {
     hash: u64,
-    hset: [u32; 3],
+    hset: [usize; 3],
 }
 
 impl HashSet {
-    pub const fn from(key: u64, block_length: u32, seed: u64) -> Self {
+    pub const fn from(key: u64, block_length: usize, seed: u64) -> Self {
         let hash = mix(key, seed);
 
         Self {
@@ -26,7 +25,7 @@ impl HashSet {
 #[derive(Default, Copy, Clone)]
 struct KeyIndex {
     hash: u64,
-    index: u32,
+    index: usize,
 }
 
 #[derive(Default, Copy, Clone)]
@@ -49,13 +48,13 @@ const fn rotl64(n: u64, c: isize) -> u64 {
 ///
 /// [A fast alternative to the modulo reduction]: http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
 #[inline]
-const fn reduce(hash: u32, n: u32) -> u32 {
-    ((hash as u64 * n as u64) >> 32) as u32
+const fn reduce(hash: u32, n: usize) -> usize {
+    ((hash as u64 * n as u64) >> 32) as usize
 }
 
 /// Computes a hash indexing the i'th filter block.
 #[inline]
-const fn h(i: usize, hash: u64, block_length: u32) -> u32 {
+const fn h(i: usize, hash: u64, block_length: usize) -> usize {
     let r2 = rotl64(hash, (i as isize) * 21) as u32;
     reduce(r2, block_length)
 }
@@ -68,7 +67,7 @@ const fn fingerprint(hash: u64) -> u64 {
 ///
 pub struct Filter {
     seed: u64,
-    block_length: u32,
+    block_length: usize,
     fingerprints: Box<[u8]>,
 }
 
@@ -81,9 +80,9 @@ impl Filter {
         } = HashSet::from(key, self.block_length, self.seed);
         let fp = fingerprint(hash) as u8;
 
-        fp == self.fingerprints[h0 as usize]
-            ^ self.fingerprints[(h1 + self.block_length) as usize]
-            ^ self.fingerprints[(h2 + 2 * self.block_length) as usize]
+        fp == self.fingerprints[h0]
+            ^ self.fingerprints[(h1 + self.block_length)]
+            ^ self.fingerprints[(h2 + 2 * self.block_length)]
     }
 }
 
@@ -104,10 +103,10 @@ fn try_enqueue_set(
     Q_block: &mut [KeyIndex],
     qblock_size: &mut usize,
 ) {
-    if H_block[idx as usize].count == 1 {
-        Q_block[*qblock_size].index = idx as u32;
+    if H_block[idx].count == 1 {
+        Q_block[*qblock_size].index = idx;
         // If there is only one key, the mask contains it wholly.
-        Q_block[*qblock_size].hash = H_block[idx as usize].mask;
+        Q_block[*qblock_size].hash = H_block[idx].mask;
         *qblock_size += 1;
     }
 }
@@ -115,23 +114,23 @@ fn try_enqueue_set(
 impl From<&[u64]> for Filter {
     fn from(keys: &[u64]) -> Self {
         let num_keys = keys.len();
-        let capacity = (1.23 * num_keys as f64) as u32 + 32;
+        let capacity = (1.23 * num_keys as f64) as usize + 32;
         let capacity = capacity / 3 * 3;
         let block_length = capacity / 3;
 
         #[allow(non_snake_case)]
         let mut Q: [Box<[KeyIndex]>; 3] = [
-            sets_block(capacity as usize),
-            sets_block(capacity as usize),
-            sets_block(capacity as usize),
+            sets_block(capacity),
+            sets_block(capacity),
+            sets_block(capacity),
         ];
         #[allow(non_snake_case)]
         let mut H: [Box<[XorSet]>; 3] = [
-            sets_block(capacity as usize),
-            sets_block(capacity as usize),
-            sets_block(capacity as usize),
+            sets_block(capacity),
+            sets_block(capacity),
+            sets_block(capacity),
         ];
-        let mut stack: Box<[KeyIndex]> = sets_block(num_keys as usize);
+        let mut stack: Box<[KeyIndex]> = sets_block(num_keys);
 
         let mut rng = 1;
         let mut seed = splitmix64(&mut rng);
@@ -141,15 +140,15 @@ impl From<&[u64]> for Filter {
 
                 for b in 0..3 {
                     let h_b = hset[b];
-                    H[b][h_b as usize].mask ^= hash;
-                    H[b][h_b as usize].count += 1;
+                    H[b][h_b].mask ^= hash;
+                    H[b][h_b].count += 1;
                 }
             }
 
             // Scan for sets with a single key. Add these keys to the queue.
             let mut q_sizes: [usize; 3] = [0, 0, 0];
             for b in 0..3 {
-                for idx in 0..(block_length as usize) {
+                for idx in 0..(block_length) {
                     try_enqueue_set(&H[b], idx, &mut Q[b], &mut q_sizes[b]);
                 }
             }
@@ -160,7 +159,7 @@ impl From<&[u64]> for Filter {
                 while q_sizes[0] > 0 {
                     q_sizes[0] -= 1;
                     let ki = Q[0][q_sizes[0]];
-                    if H[0][ki.index as usize].count == 0 {
+                    if H[0][ki.index].count == 0 {
                         continue;
                     }
                     stack[stack_size] = ki;
@@ -169,16 +168,16 @@ impl From<&[u64]> for Filter {
                     for j in &[1, 2] {
                         let idx = h(*j, ki.hash, block_length);
                         // Remove the element from set
-                        H[*j][idx as usize].mask ^= ki.hash;
-                        H[*j][idx as usize].count -= 1;
-                        try_enqueue_set(&H[*j], idx as usize, &mut Q[*j], &mut q_sizes[*j]);
+                        H[*j][idx].mask ^= ki.hash;
+                        H[*j][idx].count -= 1;
+                        try_enqueue_set(&H[*j], idx, &mut Q[*j], &mut q_sizes[*j]);
                     }
                 }
 
                 while q_sizes[1] > 0 {
                     q_sizes[1] -= 1;
                     let mut ki = Q[1][q_sizes[1]];
-                    if H[1][ki.index as usize].count == 0 {
+                    if H[1][ki.index].count == 0 {
                         continue;
                     }
                     ki.index += block_length;
@@ -188,16 +187,16 @@ impl From<&[u64]> for Filter {
                     for j in &[0, 2] {
                         let idx = h(*j, ki.hash, block_length);
                         // Remove the element from set
-                        H[*j][idx as usize].mask ^= ki.hash;
-                        H[*j][idx as usize].count -= 1;
-                        try_enqueue_set(&H[*j], idx as usize, &mut Q[*j], &mut q_sizes[*j]);
+                        H[*j][idx].mask ^= ki.hash;
+                        H[*j][idx].count -= 1;
+                        try_enqueue_set(&H[*j], idx, &mut Q[*j], &mut q_sizes[*j]);
                     }
                 }
 
                 while q_sizes[2] > 0 {
                     q_sizes[2] -= 1;
                     let mut ki = Q[2][q_sizes[2]];
-                    if H[2][ki.index as usize].count == 0 {
+                    if H[2][ki.index].count == 0 {
                         continue;
                     }
                     ki.index += 2 * block_length;
@@ -207,9 +206,9 @@ impl From<&[u64]> for Filter {
                     for j in &[0, 1] {
                         let idx = h(*j, ki.hash, block_length);
                         // Remove the element from set
-                        H[*j][idx as usize].mask ^= ki.hash;
-                        H[*j][idx as usize].count -= 1;
-                        try_enqueue_set(&H[*j], idx as usize, &mut Q[*j], &mut q_sizes[*j]);
+                        H[*j][idx].mask ^= ki.hash;
+                        H[*j][idx].count -= 1;
+                        try_enqueue_set(&H[*j], idx, &mut Q[*j], &mut q_sizes[*j]);
                     }
                 }
             }
@@ -227,23 +226,23 @@ impl From<&[u64]> for Filter {
             seed = splitmix64(&mut rng)
         }
 
-        let mut fingerprints = sets_block(capacity as usize);
+        let mut fingerprints = sets_block(capacity);
         for i in (0..num_keys).rev() {
             let ki = stack[i];
             let mut fp = fingerprint(ki.hash) as u8;
 
             if ki.index < block_length {
-                fp ^= fingerprints[(h(1, ki.hash, block_length) + block_length) as usize]
-                    ^ fingerprints[(h(2, ki.hash, block_length) + 2 * block_length) as usize]
+                fp ^= fingerprints[(h(1, ki.hash, block_length) + block_length)]
+                    ^ fingerprints[(h(2, ki.hash, block_length) + 2 * block_length)]
             } else if ki.index < 2 * block_length {
-                fp ^= fingerprints[h(0, ki.hash, block_length) as usize]
-                    ^ fingerprints[(h(2, ki.hash, block_length) + 2 * block_length) as usize]
+                fp ^= fingerprints[h(0, ki.hash, block_length)]
+                    ^ fingerprints[(h(2, ki.hash, block_length) + 2 * block_length)]
             } else {
-                fp ^= fingerprints[h(0, ki.hash, block_length) as usize]
-                    ^ fingerprints[(h(1, ki.hash, block_length) + block_length) as usize]
+                fp ^= fingerprints[h(0, ki.hash, block_length)]
+                    ^ fingerprints[(h(1, ki.hash, block_length) + block_length)]
             }
 
-            fingerprints[ki.index as usize] = fp;
+            fingerprints[ki.index] = fp;
         }
 
         Self {
