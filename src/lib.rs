@@ -2,8 +2,7 @@
 //!
 
 #![no_std]
-#![feature(allocator_internals)]
-#![needs_allocator]
+#![cfg_attr(feature = "nightly", feature(allocator_internals), needs_allocator)]
 // Configuration attributes
 #![warn(missing_docs)]
 #![forbid(clippy::all, clippy::cargo, clippy::nursery)]
