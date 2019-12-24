@@ -1,4 +1,4 @@
-use super::{murmur3::murmur3_mix64, splitmix64::splitmix64};
+use super::{murmur3::mix64, splitmix64::splitmix64};
 use alloc::{boxed::Box, vec::Vec};
 use core::f64;
 
@@ -9,9 +9,10 @@ struct HashSet {
 }
 
 impl HashSet {
-    pub fn from(key: u64, block_length: u32, seed: u64) -> Self {
+    pub const fn from(key: u64, block_length: u32, seed: u64) -> Self {
         let hash = mix(key, seed);
-        HashSet {
+
+        Self {
             hash,
             hset: [
                 h(0, hash, block_length),
@@ -35,30 +36,32 @@ struct XorSet {
 }
 
 #[inline]
-fn mix(key: u64, seed: u64) -> u64 {
-    murmur3_mix64(key.overflowing_add(seed).0)
+const fn mix(key: u64, seed: u64) -> u64 {
+    mix64(key.overflowing_add(seed).0)
 }
 
 #[inline]
-fn rotl64(n: u64, c: isize) -> u64 {
+const fn rotl64(n: u64, c: isize) -> u64 {
     (n << (c & 63)) | (n >> ((-c) & 63))
 }
-
-/// http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+///
+/// [A fast alternative to the modulo reduction]
+///
+/// [A fast alternative to the modulo reduction]: http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
 #[inline]
-fn reduce(hash: u32, n: u32) -> u32 {
+const fn reduce(hash: u32, n: u32) -> u32 {
     ((hash as u64 * n as u64) >> 32) as u32
 }
 
 /// Computes a hash indexing the i'th filter block.
 #[inline]
-fn h(i: usize, hash: u64, block_length: u32) -> u32 {
+const fn h(i: usize, hash: u64, block_length: u32) -> u32 {
     let r2 = rotl64(hash, (i as isize) * 21) as u32;
     reduce(r2, block_length)
 }
 
 #[inline]
-fn fingerprint(hash: u64) -> u64 {
+const fn fingerprint(hash: u64) -> u64 {
     hash ^ (hash >> 32)
 }
 
@@ -71,7 +74,7 @@ pub struct Filter {
 
 impl Filter {
     ///
-    pub fn contains(&self, key: u64) -> bool {
+    pub const fn contains(&self, key: u64) -> bool {
         let HashSet {
             hash,
             hset: [h0, h1, h2],
@@ -96,15 +99,15 @@ fn sets_block<T: Clone>(size: usize) -> Box<[T]> {
 #[allow(non_snake_case)]
 #[inline]
 fn try_enqueue_set(
-    H_block: &Box<[XorSet]>,
-    idx: &usize,
-    Q_block: &mut Box<[KeyIndex]>,
+    H_block: &[XorSet],
+    idx: usize,
+    Q_block: &mut [KeyIndex],
     qblock_size: &mut usize,
 ) {
-    if H_block[*idx as usize].count == 1 {
-        Q_block[*qblock_size].index = *idx as u32;
+    if H_block[idx as usize].count == 1 {
+        Q_block[*qblock_size].index = idx as u32;
         // If there is only one key, the mask contains it wholly.
-        Q_block[*qblock_size].hash = H_block[*idx as usize].mask;
+        Q_block[*qblock_size].hash = H_block[idx as usize].mask;
         *qblock_size += 1;
     }
 }
@@ -133,9 +136,8 @@ impl From<&[u64]> for Filter {
         let mut rng = 1;
         let mut seed = splitmix64(&mut rng);
         loop {
-            for k in 0..num_keys {
-                let key = keys[k];
-                let HashSet { hash, hset } = HashSet::from(key, block_length, seed);
+            for key in keys.iter() {
+                let HashSet { hash, hset } = HashSet::from(*key, block_length, seed);
 
                 for b in 0..3 {
                     let h_b = hset[b];
@@ -148,7 +150,7 @@ impl From<&[u64]> for Filter {
             let mut q_sizes: [usize; 3] = [0, 0, 0];
             for b in 0..3 {
                 for idx in 0..(block_length as usize) {
-                    try_enqueue_set(&H[b], &(idx), &mut Q[b], &mut q_sizes[b]);
+                    try_enqueue_set(&H[b], idx, &mut Q[b], &mut q_sizes[b]);
                 }
             }
 
@@ -164,12 +166,12 @@ impl From<&[u64]> for Filter {
                     stack[stack_size] = ki;
                     stack_size += 1;
 
-                    for j in [1, 2].iter() {
+                    for j in &[1, 2] {
                         let idx = h(*j, ki.hash, block_length);
                         // Remove the element from set
                         H[*j][idx as usize].mask ^= ki.hash;
                         H[*j][idx as usize].count -= 1;
-                        try_enqueue_set(&H[*j], &(idx as usize), &mut Q[*j], &mut q_sizes[*j]);
+                        try_enqueue_set(&H[*j], idx as usize, &mut Q[*j], &mut q_sizes[*j]);
                     }
                 }
 
@@ -183,12 +185,12 @@ impl From<&[u64]> for Filter {
                     stack[stack_size] = ki;
                     stack_size += 1;
 
-                    for j in [0, 2].iter() {
+                    for j in &[0, 2] {
                         let idx = h(*j, ki.hash, block_length);
                         // Remove the element from set
                         H[*j][idx as usize].mask ^= ki.hash;
                         H[*j][idx as usize].count -= 1;
-                        try_enqueue_set(&H[*j], &(idx as usize), &mut Q[*j], &mut q_sizes[*j]);
+                        try_enqueue_set(&H[*j], idx as usize, &mut Q[*j], &mut q_sizes[*j]);
                     }
                 }
 
@@ -202,12 +204,12 @@ impl From<&[u64]> for Filter {
                     stack[stack_size] = ki;
                     stack_size += 1;
 
-                    for j in [0, 1].iter() {
+                    for j in &[0, 1] {
                         let idx = h(*j, ki.hash, block_length);
                         // Remove the element from set
                         H[*j][idx as usize].mask ^= ki.hash;
                         H[*j][idx as usize].count -= 1;
-                        try_enqueue_set(&H[*j], &(idx as usize), &mut Q[*j], &mut q_sizes[*j]);
+                        try_enqueue_set(&H[*j], idx as usize, &mut Q[*j], &mut q_sizes[*j]);
                     }
                 }
             }
@@ -216,8 +218,8 @@ impl From<&[u64]> for Filter {
                 break;
             }
 
-            for b in 0..3 {
-                for set in H[b].iter_mut() {
+            for block in H.iter_mut() {
+                for set in block.iter_mut() {
                     *set = XorSet::default();
                 }
             }
@@ -293,12 +295,13 @@ mod test {
     #[test]
     fn test_false_positives() {
         const SIZE: usize = 10_000;
+        const NEGATIVES: usize = 1_000_000;
+
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SIZE).map(|_| rng.gen()).collect();
 
         let filter = Xor8Filter::from(&keys);
 
-        const NEGATIVES: usize = 1_000_000;
         let false_positives: usize = (0..NEGATIVES)
             .map(|_| rng.gen())
             .filter(|n| filter.contains(*n))

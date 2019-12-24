@@ -2,9 +2,11 @@
 //!
 
 #![no_std]
-#![warn(missing_docs)]
 #![feature(allocator_internals)]
 #![needs_allocator]
+// Configuration attributes
+#![warn(missing_docs)]
+#![forbid(clippy::all, clippy::cargo, clippy::nursery)]
 
 extern crate alloc;
 

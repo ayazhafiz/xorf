@@ -1,6 +1,6 @@
-/// [MurmurHash3]'s finalization mix implementation, causing bits to [avalanche].
+/// [`MurmurHash3`]'s finalization mix implementation, causing bits to [avalanche].
 ///
-/// [MurmurHash3]: https://github.com/spaolacci/murmur3
+/// [`MurmurHash3`]: https://github.com/spaolacci/murmur3
 /// [avalanche]: https://en.wikipedia.org/wiki/Avalanche_effect
 ///
 /// Copyright 2013, Sébastien Paolacci.
@@ -27,11 +27,11 @@
 /// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 /// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 /// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-pub fn murmur3_mix64(mut k: u64) -> u64 {
+pub const fn mix64(mut k: u64) -> u64 {
     k ^= k >> 33;
-    k = k.overflowing_mul(0xff51afd7ed558ccd).0;
+    k = k.overflowing_mul(0xff51_afd7_ed55_8ccd).0;
     k ^= k >> 33;
-    k = k.overflowing_mul(0xc4ceb9fe1a85ec53).0;
+    k = k.overflowing_mul(0xc4ce_b9fe_1a85_ec53).0;
     k ^= k >> 33;
     k
 }

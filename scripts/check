@@ -23,8 +23,7 @@ case "$ACTION" in
 lintformat)
   set -x
 
-  cargo clippy --all-targets --all-features -- \
-    -F clippy::all -F clippy::cargo -F clippy::pedantic -F clippy::nursery
+  cargo clippy --all-targets --all-features
   cargo fmt --all -- --check
   ;;
 test)
