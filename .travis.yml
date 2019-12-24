@@ -1,0 +1,26 @@
+dist: xenial
+os: linux
+
+language: rust
+rust:
+  - stable
+  - nightly
+cache: cargo
+
+matrix:
+  include:
+    - name: "LintFormat"
+      before_script:
+        - rustup component add clippy || cargo install --git
+          https://github.com/rust-lang/rust-clippy/ --force clippy
+        - rustup component add rustfmt
+      script: scripts/check lf
+
+    - name: "Test"
+      language: rust
+      rust:
+        - stable
+        - nightly
+      cache: cargo
+      os: linux
+      script: scripts/check test

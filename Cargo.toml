@@ -1,0 +1,21 @@
+[package]
+name = "xorf"
+version = "0.0.1"
+authors = ["ayazhafiz <ayaz.hafiz.1@gmail.com>"]
+edition = "2018"
+description = """
+Library implementing xor filters - faster and smaller than bloom and cuckoo filters.
+"""
+license = "MIT"
+readme = "README.md"
+documentation = "https://docs.rs/xorf"
+homepage = "https://github.com/ayazhafiz/xorf"
+repository = "https://github.com/ayazhafiz/xorf"
+keywords = ["xor filter", "xor", "filter", "hash", "hashing", "bloom filter"]
+categories = ["algorithms", "data-structures", "no-std", "caching"]
+
+[badges]
+maintenance = { status = "actively-developed" }
+travis-ci = { repository = "ayazhafiz/xorf", branch = "master" }
+is-it-maintained-issue-resolution = { repository = "ayazhafiz/xorf" }
+is-it-maintained-open-issues = { repository = "ayazhafiz/xorf" }

@@ -1,0 +1,35 @@
+#!/bin/bash
+# Usage:
+#   check <action>
+#
+# Arguments:
+#   action    (lf|lintformat|test)
+
+set -euo pipefail
+
+ACTION="$1"
+ACTIONS_LIST=("\`lintformat'" "\`lf'" "\`test'")
+ACTION_OPTIONS=$(echo "${ACTIONS_LIST[@]}" | sed "s/ /, /g")
+if [ -z "$ACTION" ]; then
+  echo "No action specified; must be one of $ACTION_OPTIONS"
+elif [ "$ACTION" = "lf" ]; then
+  ACTION="lintformat"
+elif [ "$ACTION" != "lintformat" ] && [ "$ACTION" != "test" ]; then
+  echo "Action must be one of \`lintformat'|\`lf', \`test'; found $ACTION"
+  exit 1
+fi
+
+case "$ACTION" in
+lintformat)
+  set -x
+
+  cargo clippy --all-targets --all-features -- \
+    -F clippy::all -F clippy::cargo -F clippy::pedantic -F clippy::nursery
+  cargo fmt --all -- --check
+  ;;
+test)
+  set -x
+
+  cargo test
+  ;;
+esac
