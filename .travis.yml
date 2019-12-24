@@ -3,8 +3,8 @@ os: linux
 
 language: rust
 rust:
-  - stable
   - nightly
+  - stable
 cache: cargo
 
 matrix:
@@ -17,10 +17,4 @@ matrix:
       script: scripts/check lf
 
     - name: "Test"
-      language: rust
-      rust:
-        - stable
-        - nightly
-      cache: cargo
-      os: linux
       script: scripts/check test

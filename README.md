@@ -1,5 +1,7 @@
 # xorfilter
 
+[![Build Status](https://travis-ci.com/ayazhafiz/xorf.svg?branch=master)](https://travis-ci.com/ayazhafiz/xorf)
+
 This repository hosts a Rust library implementing
 [xor filters](https://arxiv.org/abs/1912.08258). Daniel Lemire's
 [go implementation](https://github.com/FastFilter/xorfilter) provides a useful
