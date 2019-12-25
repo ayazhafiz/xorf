@@ -5,6 +5,9 @@
 use crate::{murmur3, splitmix64::splitmix64, Filter};
 use alloc::{boxed::Box, vec::Vec};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// A set of hashes indexing three blocks.
 struct HashSet {
     /// Key hash
@@ -108,6 +111,11 @@ const fn fingerprint(hash: u64) -> u64 {
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
 /// assert!(fp_rate < 0.4, "False positive rate is {}", fp_rate);
 /// ```
+///
+/// Serializing and deserializing `Xor8` filters can be enabled with the [`serde`] feature.
+///
+/// [`serde`]: http://serde.rs
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Xor8 {
     seed: u64,
     block_length: usize,

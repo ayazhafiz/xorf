@@ -27,5 +27,8 @@ status = "actively-developed"
 branch = "master"
 repository = "ayazhafiz/xorf"
 
+[dependencies]
+serde = { version = "1.0.104", optional = true, features = ["derive"] }
+
 [dev-dependencies]
 rand = "0.7.2"

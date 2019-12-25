@@ -29,7 +29,7 @@
 // Configuration attributes
 #![warn(missing_docs)]
 #![forbid(clippy::all, clippy::cargo, clippy::nursery)]
-#![allow(clippy::len_without_is_empty)]
+#![allow(clippy::len_without_is_empty, clippy::useless_attribute)]
 
 extern crate alloc;
 
