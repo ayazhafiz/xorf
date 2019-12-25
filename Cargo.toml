@@ -7,12 +7,12 @@ Library implementing xor filters - faster and smaller than bloom and cuckoo filt
 documentation = "https://docs.rs/xorf"
 edition = "2018"
 homepage = "https://github.com/ayazhafiz/xorf"
-keywords = ["xor filter", "xor", "filter", "hash", "hashing", "bloom filter"]
+keywords = ["xor", "filter", "hash", "hashing"]
 license = "MIT"
 name = "xorf"
 readme = "README.md"
 repository = "https://github.com/ayazhafiz/xorf"
-version = "0.0.1"
+version = "0.1.0"
 
 [badges.is-it-maintained-issue-resolution]
 repository = "ayazhafiz/xorf"
