@@ -1,9 +1,15 @@
-use super::{murmur3::mix64, splitmix64::splitmix64};
+//! Implements an Xor8 Filter as described in [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters].
+//!
+//! [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters]: https://arxiv.org/abs/1912.08258
+
+use super::{murmur3, splitmix64::splitmix64};
 use alloc::{boxed::Box, vec::Vec};
 
-#[derive(Default)]
+/// A set of hashes indexing three blocks.
 struct HashSet {
+    /// Key hash
     hash: u64,
+    /// Indexing hashes h_0, h_1, h_2 created with `hash`.
     hset: [usize; 3],
 }
 
@@ -22,31 +28,33 @@ impl HashSet {
     }
 }
 
-#[derive(Default, Copy, Clone)]
+/// The hash of a key and the index of that key in the construction array H.
+#[derive(Copy, Clone)]
 struct KeyIndex {
     hash: u64,
     index: usize,
 }
 
-#[derive(Default, Copy, Clone)]
-struct XorSet {
+/// A set in the construction array H. Elements are encoded via xor with the mask.
+#[derive(Default)]
+struct HSet {
     count: u32,
     mask: u64,
 }
 
+/// Applies a finalization mix to a randomly-seeded key, resulting in an avalanched hash. This
+/// helps avoid high false-positive ratios (see Section 4).
 #[inline]
 const fn mix(key: u64, seed: u64) -> u64 {
-    mix64(key.overflowing_add(seed).0)
+    murmur3::mix64(key.overflowing_add(seed).0)
 }
 
 #[inline]
 const fn rotl64(n: u64, c: isize) -> u64 {
     (n << (c & 63)) | (n >> ((-c) & 63))
 }
-///
-/// [A fast alternative to the modulo reduction]
-///
-/// [A fast alternative to the modulo reduction]: http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+
+/// [A fast alternative to the modulo reduction](http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/)
 #[inline]
 const fn reduce(hash: u32, n: usize) -> usize {
     ((hash as u64 * n as u64) >> 32) as usize
@@ -55,8 +63,8 @@ const fn reduce(hash: u32, n: usize) -> usize {
 /// Computes a hash indexing the i'th filter block.
 #[inline]
 const fn h(i: usize, hash: u64, block_length: usize) -> usize {
-    let r2 = rotl64(hash, (i as isize) * 21) as u32;
-    reduce(r2, block_length)
+    let rot = rotl64(hash, (i as isize) * 21) as u32; // shift hash to correct block interval
+    reduce(rot, block_length)
 }
 
 #[inline]
@@ -64,7 +72,15 @@ const fn fingerprint(hash: u64) -> u64 {
     hash ^ (hash >> 32)
 }
 
+/// Xor filter using 8-bit fingerprints.
 ///
+/// An `Xor8Filter` uses <10 bits per entry of the set is it constructed from, and has a false
+/// positive rate of <4%. As with other probabilistic filters, a higher number of entries decreases
+/// the bits per entry but increases the false positive rate.
+///
+/// An `Xor8Filter` is constructed from a set of 64-bit unsigned integers and is immutable.
+///
+/// # Examples
 pub struct Filter {
     seed: u64,
     block_length: usize,
@@ -87,7 +103,7 @@ impl Filter {
 }
 
 #[inline]
-fn sets_block<T: Clone>(size: usize) -> Box<[T]> {
+fn sets_block<T>(size: usize) -> Box<[T]> {
     let mut sets_block = Vec::with_capacity(size);
     unsafe {
         sets_block.set_len(size);
@@ -98,7 +114,7 @@ fn sets_block<T: Clone>(size: usize) -> Box<[T]> {
 #[allow(non_snake_case)]
 #[inline]
 fn try_enqueue_set(
-    H_block: &[XorSet],
+    H_block: &[HSet],
     idx: usize,
     Q_block: &mut [KeyIndex],
     qblock_size: &mut usize,
@@ -125,7 +141,7 @@ impl From<&[u64]> for Filter {
             sets_block(capacity),
         ];
         #[allow(non_snake_case)]
-        let mut H: [Box<[XorSet]>; 3] = [
+        let mut H: [Box<[HSet]>; 3] = [
             sets_block(capacity),
             sets_block(capacity),
             sets_block(capacity),
@@ -219,7 +235,7 @@ impl From<&[u64]> for Filter {
 
             for block in H.iter_mut() {
                 for set in block.iter_mut() {
-                    *set = XorSet::default();
+                    *set = HSet::default();
                 }
             }
 
