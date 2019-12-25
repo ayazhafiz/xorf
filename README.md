@@ -1,6 +1,10 @@
 # xorf
 
 [![Build Status](https://travis-ci.com/ayazhafiz/xorf.svg?branch=master)](https://travis-ci.com/ayazhafiz/xorf)
+[![Crates.io](https://img.shields.io/crates/v/xorf)](https://crates.io/crates/xorf)
+
+- [Documentation](https://docs.rs/xorf)
+- [Crates.io Registry](https://crates.io/crates/xorf)
 
 This repository hosts a Rust library implementing
 [xor filters](https://arxiv.org/abs/1912.08258) -- data structures for fast
