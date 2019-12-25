@@ -35,8 +35,11 @@ extern crate alloc;
 
 mod murmur3;
 mod splitmix64;
+
+mod xor16;
 mod xor8;
 
+pub use xor16::Xor16;
 pub use xor8::Xor8;
 
 /// Methods common to xor filters.

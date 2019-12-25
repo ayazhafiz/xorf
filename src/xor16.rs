@@ -1,4 +1,4 @@
-//! Implements Xor8 filters as described in [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters].
+//! Implements Xor16 filters as described in [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters].
 //!
 //! [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters]: https://arxiv.org/abs/1912.08258
 
@@ -75,24 +75,24 @@ const fn fingerprint(hash: u64) -> u64 {
     hash ^ (hash >> 32)
 }
 
-/// Xor filter using 8-bit fingerprints.
+/// Xor filter using 16-bit fingerprints.
 ///
-/// An `Xor8` filter uses <10 bits per entry of the set is it constructed from, and has a false
-/// positive rate of <4%. As with other probabilistic filters, a higher number of entries decreases
+/// An `Xor16` filter uses <20 bits per entry of the set is it constructed from, and has a false
+/// positive rate of <0.02%. As with other probabilistic filters, a higher number of entries decreases
 /// the bits per entry but increases the false positive rate.
 ///
-/// An `Xor8` is constructed from a set of 64-bit unsigned integers and is immutable.
+/// An `Xor16` is constructed from a set of 64-bit unsigned integers and is immutable.
 ///
 /// ```
 /// # extern crate alloc;
-/// use xorf::{Filter, Xor8};
+/// use xorf::{Filter, Xor16};
 /// # use alloc::vec::Vec;
 /// # use rand::Rng;
 ///
 /// # let mut rng = rand::thread_rng();
 /// const SAMPLE_SIZE: usize = 1_000_000;
 /// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
-/// let filter = Xor8::from(&keys);
+/// let filter = Xor16::from(&keys);
 ///
 /// // no false negatives
 /// for key in keys {
@@ -101,7 +101,7 @@ const fn fingerprint(hash: u64) -> u64 {
 ///
 /// // bits per entry
 /// let bpe = (filter.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
-/// assert!(bpe < 10., "Bits per entry is {}", bpe);
+/// assert!(bpe < 20., "Bits per entry is {}", bpe);
 ///
 /// // false positive rate
 /// let false_positives: usize = (0..SAMPLE_SIZE)
@@ -109,27 +109,27 @@ const fn fingerprint(hash: u64) -> u64 {
 ///     .filter(|n| filter.contains(*n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-/// assert!(fp_rate < 0.4, "False positive rate is {}", fp_rate);
+/// assert!(fp_rate < 0.02, "False positive rate is {}", fp_rate);
 /// ```
 ///
-/// Serializing and deserializing `Xor8` filters can be enabled with the [`serde`] feature.
+/// Serializing and deserializing `Xor16` filters can be enabled with the [`serde`] feature.
 ///
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Xor8 {
+pub struct Xor16 {
     seed: u64,
     block_length: usize,
-    fingerprints: Box<[u8]>,
+    fingerprints: Box<[u16]>,
 }
 
-impl Filter for Xor8 {
+impl Filter for Xor16 {
     /// Returns `true` if the filter contains the specified key. Has a false positive rate of <4%.
     fn contains(&self, key: u64) -> bool {
         let HashSet {
             hash,
             hset: [h0, h1, h2],
         } = HashSet::from(key, self.block_length, self.seed);
-        let fp = fingerprint(hash) as u8;
+        let fp = fingerprint(hash) as u16;
 
         fp == self.fingerprints[h0]
             ^ self.fingerprints[(h1 + self.block_length)]
@@ -168,7 +168,7 @@ fn try_enqueue_set(
     }
 }
 
-impl From<&[u64]> for Xor8 {
+impl From<&[u64]> for Xor16 {
     fn from(keys: &[u64]) -> Self {
         // See Algorithm 3 in the paper.
         let num_keys = keys.len();
@@ -290,7 +290,7 @@ impl From<&[u64]> for Xor8 {
         #[allow(non_snake_case)]
         let mut B = sets_block(capacity);
         for ki in stack.iter().rev() {
-            B[ki.index] = fingerprint(ki.hash) as u8
+            B[ki.index] = fingerprint(ki.hash) as u16
                 ^ B[h(0, ki.hash, block_length)]
                 ^ B[(h(1, ki.hash, block_length) + block_length)]
                 ^ B[(h(2, ki.hash, block_length) + 2 * block_length)];
@@ -304,7 +304,7 @@ impl From<&[u64]> for Xor8 {
     }
 }
 
-impl From<&Vec<u64>> for Xor8 {
+impl From<&Vec<u64>> for Xor16 {
     fn from(v: &Vec<u64>) -> Self {
         Self::from(v.as_slice())
     }
@@ -312,7 +312,7 @@ impl From<&Vec<u64>> for Xor8 {
 
 #[cfg(test)]
 mod test {
-    use crate::{Filter, Xor8};
+    use crate::{Filter, Xor16};
 
     use alloc::vec::Vec;
     use rand::Rng;
@@ -323,7 +323,7 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Xor8::from(&keys);
+        let filter = Xor16::from(&keys);
 
         for key in keys {
             assert!(filter.contains(key));
@@ -336,10 +336,10 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Xor8::from(&keys);
-        let bpe = (filter.fingerprints.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
+        let filter = Xor16::from(&keys);
+        let bpe = (filter.len() as f64) * 16.0 / (SAMPLE_SIZE as f64);
 
-        assert!(bpe < 10., "Bits per entry is {}", bpe);
+        assert!(bpe < 20., "Bits per entry is {}", bpe);
     }
 
     #[test]
@@ -348,13 +348,13 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Xor8::from(&keys);
+        let filter = Xor16::from(&keys);
 
         let false_positives: usize = (0..SAMPLE_SIZE)
             .map(|_| rng.gen())
             .filter(|n| filter.contains(*n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-        assert!(fp_rate < 0.4, "False positive rate is {}", fp_rate);
+        assert!(fp_rate < 0.02, "False positive rate is {}", fp_rate);
     }
 }
