@@ -1,6 +1,6 @@
-//! Implements an Xor16 Xor16 as described in [Xor Xor16s: Faster and Smaller Than Bloom and Cuckoo Xor16s].
+//! Implements Xor16 filters as described in [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters].
 //!
-//! [Xor Xor16s: Faster and Smaller Than Bloom and Cuckoo Xor16s]: https://arxiv.org/abs/1912.08258
+//! [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters]: https://arxiv.org/abs/1912.08258
 
 use crate::{murmur3, splitmix64::splitmix64, Filter};
 use alloc::{boxed::Box, vec::Vec};
