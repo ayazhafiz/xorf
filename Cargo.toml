@@ -1,25 +1,13 @@
 [package]
 authors = ["ayazhafiz <ayaz.hafiz.1@gmail.com>"]
-categories = [
-    "algorithms",
-    "data-structures",
-    "no-std",
-    "caching",
-]
+categories = ["algorithms", "data-structures", "no-std", "caching"]
 description = """
 Library implementing xor filters - faster and smaller than bloom and cuckoo filters.
 """
 documentation = "https://docs.rs/xorf"
 edition = "2018"
 homepage = "https://github.com/ayazhafiz/xorf"
-keywords = [
-    "xor filter",
-    "xor",
-    "filter",
-    "hash",
-    "hashing",
-    "bloom filter",
-]
+keywords = ["xor filter", "xor", "filter", "hash", "hashing", "bloom filter"]
 license = "MIT"
 name = "xorf"
 readme = "README.md"
