@@ -279,6 +279,7 @@ impl From<&[u64]> for Xor8 {
         }
 
         // Construct all fingerprints (see Algorithm 4 in the paper).
+        #[allow(non_snake_case)]
         let mut B = sets_block(capacity);
         for ki in stack.iter().rev() {
             B[ki.index] = fingerprint(ki.hash) as u8
