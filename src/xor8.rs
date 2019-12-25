@@ -1,8 +1,8 @@
-//! Implements an Xor8 Filter as described in [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters].
+//! Implements an Xor8 Xor8 as described in [Xor Xor8s: Faster and Smaller Than Bloom and Cuckoo Xor8s].
 //!
-//! [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters]: https://arxiv.org/abs/1912.08258
+//! [Xor Xor8s: Faster and Smaller Than Bloom and Cuckoo Xor8s]: https://arxiv.org/abs/1912.08258
 
-use super::{murmur3, splitmix64::splitmix64};
+use crate::{murmur3, splitmix64::splitmix64, Filter};
 use alloc::{boxed::Box, vec::Vec};
 
 /// A set of hashes indexing three blocks.
@@ -43,7 +43,7 @@ struct HSet {
 }
 
 /// Applies a finalization mix to a randomly-seeded key, resulting in an avalanched hash. This
-/// helps avoid high false-positive ratios (see Section 4).
+/// helps avoid high false-positive ratios (see Section 4 in the paper).
 #[inline]
 const fn mix(key: u64, seed: u64) -> u64 {
     murmur3::mix64(key.overflowing_add(seed).0)
@@ -74,22 +74,49 @@ const fn fingerprint(hash: u64) -> u64 {
 
 /// Xor filter using 8-bit fingerprints.
 ///
-/// An `Xor8Filter` uses <10 bits per entry of the set is it constructed from, and has a false
+/// An `Xor8` filter uses <10 bits per entry of the set is it constructed from, and has a false
 /// positive rate of <4%. As with other probabilistic filters, a higher number of entries decreases
 /// the bits per entry but increases the false positive rate.
 ///
-/// An `Xor8Filter` is constructed from a set of 64-bit unsigned integers and is immutable.
+/// An `Xor8` is constructed from a set of 64-bit unsigned integers and is immutable.
 ///
-/// # Examples
-pub struct Filter {
+/// ```
+/// # extern crate alloc;
+/// use xorf::{Filter, Xor8};
+/// # use alloc::vec::Vec;
+/// # use rand::Rng;
+///
+/// # let mut rng = rand::thread_rng();
+/// const SAMPLE_SIZE: usize = 1_000_000;
+/// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+/// let filter = Xor8::from(&keys);
+///
+/// // no false negatives
+/// for key in keys {
+///     assert!(filter.contains(key));
+/// }
+///
+/// // bits per entry
+/// let bpe = (filter.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
+/// assert!(bpe < 10., "Bits per entry is {}", bpe);
+///
+/// // false positive rate
+/// let false_positives: usize = (0..SAMPLE_SIZE)
+///     .map(|_| rng.gen())
+///     .filter(|n| filter.contains(*n))
+///     .count();
+/// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
+/// assert!(fp_rate < 0.4, "False positive rate is {}", fp_rate);
+/// ```
+pub struct Xor8 {
     seed: u64,
     block_length: usize,
     fingerprints: Box<[u8]>,
 }
 
-impl Filter {
-    ///
-    pub const fn contains(&self, key: u64) -> bool {
+impl Filter for Xor8 {
+    /// Returns `true` if the filter contains the specified key. Has a false positive rate of <4%.
+    fn contains(&self, key: u64) -> bool {
         let HashSet {
             hash,
             hset: [h0, h1, h2],
@@ -100,8 +127,13 @@ impl Filter {
             ^ self.fingerprints[(h1 + self.block_length)]
             ^ self.fingerprints[(h2 + 2 * self.block_length)]
     }
+
+    fn len(&self) -> usize {
+        self.fingerprints.len()
+    }
 }
 
+/// Creates a block of sets, each set being of type T.
 #[inline]
 fn sets_block<T>(size: usize) -> Box<[T]> {
     let mut sets_block = Vec::with_capacity(size);
@@ -111,6 +143,7 @@ fn sets_block<T>(size: usize) -> Box<[T]> {
     sets_block.into_boxed_slice()
 }
 
+/// Enqueues a set from the temporary construction array H if the set contains only one key.
 #[allow(non_snake_case)]
 #[inline]
 fn try_enqueue_set(
@@ -127,11 +160,12 @@ fn try_enqueue_set(
     }
 }
 
-impl From<&[u64]> for Filter {
+impl From<&[u64]> for Xor8 {
     fn from(keys: &[u64]) -> Self {
+        // See Algorithm 3 in the paper.
         let num_keys = keys.len();
         let capacity = (1.23 * num_keys as f64) as usize + 32;
-        let capacity = capacity / 3 * 3;
+        let capacity = capacity / 3 * 3; // round to nearest multiple of 3
         let block_length = capacity / 3;
 
         #[allow(non_snake_case)]
@@ -151,13 +185,14 @@ impl From<&[u64]> for Filter {
         let mut rng = 1;
         let mut seed = splitmix64(&mut rng);
         loop {
+            // Populate H by adding each key to its respective set.
             for key in keys.iter() {
                 let HashSet { hash, hset } = HashSet::from(*key, block_length, seed);
 
                 for b in 0..3 {
-                    let h_b = hset[b];
-                    H[b][h_b].mask ^= hash;
-                    H[b][h_b].count += 1;
+                    let setindex = hset[b];
+                    H[b][setindex].mask ^= hash;
+                    H[b][setindex].count += 1;
                 }
             }
 
@@ -170,20 +205,23 @@ impl From<&[u64]> for Filter {
             }
 
             let mut stack_size = 0;
-            // While the queue isn't empty...
             while q_sizes.iter().sum::<usize>() > 0 {
                 while q_sizes[0] > 0 {
+                    // Remove an element from the queue.
                     q_sizes[0] -= 1;
                     let ki = Q[0][q_sizes[0]];
                     if H[0][ki.index].count == 0 {
                         continue;
                     }
+                    // If it's the only element in its respective set in H, add it to the output
+                    // stack.
                     stack[stack_size] = ki;
                     stack_size += 1;
 
+                    // Remove the element from every other set and enqueue any sets that now only
+                    // have one element.
                     for j in &[1, 2] {
                         let idx = h(*j, ki.hash, block_length);
-                        // Remove the element from set
                         H[*j][idx].mask ^= ki.hash;
                         H[*j][idx].count -= 1;
                         try_enqueue_set(&H[*j], idx, &mut Q[*j], &mut q_sizes[*j]);
@@ -202,7 +240,6 @@ impl From<&[u64]> for Filter {
 
                     for j in &[0, 2] {
                         let idx = h(*j, ki.hash, block_length);
-                        // Remove the element from set
                         H[*j][idx].mask ^= ki.hash;
                         H[*j][idx].count -= 1;
                         try_enqueue_set(&H[*j], idx, &mut Q[*j], &mut q_sizes[*j]);
@@ -221,7 +258,6 @@ impl From<&[u64]> for Filter {
 
                     for j in &[0, 1] {
                         let idx = h(*j, ki.hash, block_length);
-                        // Remove the element from set
                         H[*j][idx].mask ^= ki.hash;
                         H[*j][idx].count -= 1;
                         try_enqueue_set(&H[*j], idx, &mut Q[*j], &mut q_sizes[*j]);
@@ -233,43 +269,33 @@ impl From<&[u64]> for Filter {
                 break;
             }
 
+            // Filter failed to be created; reset and try again.
             for block in H.iter_mut() {
                 for set in block.iter_mut() {
                     *set = HSet::default();
                 }
             }
-
             seed = splitmix64(&mut rng)
         }
 
-        let mut fingerprints = sets_block(capacity);
-        for i in (0..num_keys).rev() {
-            let ki = stack[i];
-            let mut fp = fingerprint(ki.hash) as u8;
-
-            if ki.index < block_length {
-                fp ^= fingerprints[(h(1, ki.hash, block_length) + block_length)]
-                    ^ fingerprints[(h(2, ki.hash, block_length) + 2 * block_length)]
-            } else if ki.index < 2 * block_length {
-                fp ^= fingerprints[h(0, ki.hash, block_length)]
-                    ^ fingerprints[(h(2, ki.hash, block_length) + 2 * block_length)]
-            } else {
-                fp ^= fingerprints[h(0, ki.hash, block_length)]
-                    ^ fingerprints[(h(1, ki.hash, block_length) + block_length)]
-            }
-
-            fingerprints[ki.index] = fp;
+        // Construct all fingerprints (see Algorithm 4 in the paper).
+        let mut B = sets_block(capacity);
+        for ki in stack.iter().rev() {
+            B[ki.index] = fingerprint(ki.hash) as u8
+                ^ B[h(0, ki.hash, block_length)]
+                ^ B[(h(1, ki.hash, block_length) + block_length)]
+                ^ B[(h(2, ki.hash, block_length) + 2 * block_length)];
         }
 
         Self {
             seed,
             block_length,
-            fingerprints,
+            fingerprints: B,
         }
     }
 }
 
-impl From<&Vec<u64>> for Filter {
+impl From<&Vec<u64>> for Xor8 {
     fn from(v: &Vec<u64>) -> Self {
         Self::from(v.as_slice())
     }
@@ -277,18 +303,18 @@ impl From<&Vec<u64>> for Filter {
 
 #[cfg(test)]
 mod test {
-    use crate::Xor8Filter;
+    use crate::{Filter, Xor8};
 
     use alloc::vec::Vec;
     use rand::Rng;
 
     #[test]
     fn test_initialization() {
-        const SIZE: usize = 10_000;
+        const SAMPLE_SIZE: usize = 1_000_000;
         let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SIZE).map(|_| rng.gen()).collect();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Xor8Filter::from(&keys);
+        let filter = Xor8::from(&keys);
 
         for key in keys {
             assert!(filter.contains(key));
@@ -297,31 +323,29 @@ mod test {
 
     #[test]
     fn test_bits_per_entry() {
-        const SIZE: usize = 10_000;
+        const SAMPLE_SIZE: usize = 1_000_000;
         let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SIZE).map(|_| rng.gen()).collect();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Xor8Filter::from(&keys);
-        let bpe = (filter.fingerprints.len() as f64) * 8.0 / (SIZE as f64);
+        let filter = Xor8::from(&keys);
+        let bpe = (filter.fingerprints.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
 
-        assert!(bpe < 10.);
+        assert!(bpe < 10., "Bits per entry is {}", bpe);
     }
 
     #[test]
     fn test_false_positives() {
-        const SIZE: usize = 10_000;
-        const NEGATIVES: usize = 1_000_000;
-
+        const SAMPLE_SIZE: usize = 1_000_000;
         let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SIZE).map(|_| rng.gen()).collect();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Xor8Filter::from(&keys);
+        let filter = Xor8::from(&keys);
 
-        let false_positives: usize = (0..NEGATIVES)
+        let false_positives: usize = (0..SAMPLE_SIZE)
             .map(|_| rng.gen())
             .filter(|n| filter.contains(*n))
             .count();
-        let fp_rate: f64 = (false_positives * 100) as f64 / NEGATIVES as f64;
-        assert!(fp_rate < 0.4);
+        let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
+        assert!(fp_rate < 0.4, "False positive rate is {}", fp_rate);
     }
 }

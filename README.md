@@ -20,4 +20,5 @@ filter libraries.
 
 Xor filters operate on sets ofs 64-bit unsigned integers. Information regarding
 usage of the filters can be found in the
-[library documentation](https://docs.rs/xorf).
+[library documentation](https://docs.rs/xorf). This library is `no_std` and
+[`needs_allocator`](https://doc.rust-lang.org/1.9.0/book/custom-allocators.html).
