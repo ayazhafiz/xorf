@@ -1,6 +1,7 @@
 //! Common methods for xor filters.
 
 use crate::murmur3;
+use alloc::{boxed::Box, vec::Vec};
 
 /// A set of hashes indexing three blocks.
 pub struct HashSet {
@@ -11,26 +12,18 @@ pub struct HashSet {
 }
 
 impl HashSet {
-    #[inline]
     pub const fn from(key: u64, block_length: usize, seed: u64) -> Self {
         let hash = mix(key, seed);
 
         Self {
             hash,
             hset: [
-                crate::h!(index block 0, of length block_length, using hash),
-                crate::h!(index block 1, of length block_length, using hash),
-                crate::h!(index block 2, of length block_length, using hash),
+                h(0, hash, block_length),
+                h(1, hash, block_length),
+                h(2, hash, block_length),
             ],
         }
     }
-}
-
-/// Applies a finalization mix to a randomly-seeded key, resulting in an avalanched hash. This
-/// helps avoid high false-positive ratios (see Section 4 in the paper).
-#[inline]
-const fn mix(key: u64, seed: u64) -> u64 {
-    murmur3::mix64(key.overflowing_add(seed).0)
 }
 
 /// The hash of a key and the index of that key in the construction array H.
@@ -47,94 +40,83 @@ pub struct HSet {
     pub mask: u64,
 }
 
-/// Computes a fingerprint.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! fingerprint(
-    ($hash:expr) => {
-        $hash ^ ($hash >> 32)
-    };
-);
+/// Applies a finalization mix to a randomly-seeded key, resulting in an avalanched hash. This
+/// helps avoid high false-positive ratios (see Section 4 in the paper).
+#[inline]
+pub const fn mix(key: u64, seed: u64) -> u64 {
+    murmur3::mix64(key.overflowing_add(seed).0)
+}
 
-/// Rotate left
-#[doc(hidden)]
-#[macro_export]
-macro_rules! rotl64(
-    ($n:expr, by $c:expr) => {
-        ($n << ($c & 63)) | ($n >> ((-$c) & 63))
-    };
-);
+#[inline]
+pub const fn rotl64(n: u64, c: isize) -> u64 {
+    (n << (c & 63)) | (n >> ((-c) & 63))
+}
 
 /// [A fast alternative to the modulo reduction](http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/)
-#[doc(hidden)]
-#[macro_export]
-macro_rules! reduce(
-    ($hash:ident on interval $n:expr) => {
-        (($hash as u64 * $n as u64) >> 32) as usize
-    };
-);
+#[inline]
+pub const fn reduce(hash: u32, n: usize) -> usize {
+    ((hash as u64 * n as u64) >> 32) as usize
+}
 
 /// Computes a hash indexing the i'th filter block.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! h(
-    (index block $i:expr, of length $block_length:expr, using $hash:expr) => {
-        {
-            let rot = $crate::rotl64!($hash, by (($i as isize) * 21)) as u32; // shift hash to correct block interval
-            $crate::reduce!(rot on interval $block_length)
-        }
-    };
-);
+#[inline]
+pub const fn h(i: usize, hash: u64, block_length: usize) -> usize {
+    let rot = rotl64(hash, (i as isize) * 21) as u32; // shift hash to correct block interval
+    reduce(rot, block_length)
+}
+
+#[inline]
+pub const fn fingerprint(hash: u64) -> u64 {
+    hash ^ (hash >> 32)
+}
 
 /// Creates a block of sets, each set being of type T.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! make_block(
-    ($num:ident sets of $T:ty) => {
-        {
-            let mut sets_block: Vec<$T> = Vec::with_capacity($num);
-            unsafe {
-                sets_block.set_len($num);
-            }
-            sets_block.into_boxed_slice()
-        }
-    };
-);
+#[inline]
+pub fn sets_block<T>(size: usize) -> Box<[T]> {
+    let mut sets_block = Vec::with_capacity(size);
+    unsafe {
+        sets_block.set_len(size);
+    }
+    sets_block.into_boxed_slice()
+}
 
 /// Enqueues a set from the temporary construction array H if the set contains only one key.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! try_enqueue(
-    (block $H_block:expr, set #$idx:expr; on queue block $Q_block:expr, of size $Qblock_size:expr) => {
-        if $H_block[$idx].count == 1 {
-            $Q_block[$Qblock_size].index = $idx;
-            // If there is only one key, the mask contains it wholly.
-            $Q_block[$Qblock_size].hash = $H_block[$idx].mask;
-            $Qblock_size += 1;
-        }
-    };
-);
+#[allow(non_snake_case)]
+#[inline]
+pub fn try_enqueue(
+    H_block: &[HSet],
+    idx: usize,
+    Q_block: &mut [KeyIndex],
+    qblock_size: &mut usize,
+) {
+    if H_block[idx].count == 1 {
+        Q_block[*qblock_size].index = idx;
+        // If there is only one key, the mask contains it wholly.
+        Q_block[*qblock_size].hash = H_block[idx].mask;
+        *qblock_size += 1;
+    }
+}
 
 /// Creates a `contains(u64)` implementation for an xor filter of fingerprint type `$fpty`.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! contains_impl(
-    ($key:ident, $self:expr, fingerprint $fpty:ty) => {
-        {
-            use $crate::prelude::HashSet;
+     ($key:ident, $self:expr, fingerprint $fpty:ty) => {
+         {
+             use $crate::prelude::HashSet;
 
-            let HashSet {
-                hash,
-                hset: [h0, h1, h2],
-            } = HashSet::from($key, $self.block_length, $self.seed);
-            let fp = $crate::fingerprint!(hash) as $fpty;
+             let HashSet {
+                 hash,
+                 hset: [h0, h1, h2],
+             } = HashSet::from($key, $self.block_length, $self.seed);
+             let fp = $crate::prelude::fingerprint(hash) as $fpty;
 
-            fp == $self.fingerprints[h0]
-                ^ $self.fingerprints[(h1 + $self.block_length)]
-                ^ $self.fingerprints[(h2 + 2 * $self.block_length)]
-        }
-    };
-);
+             fp == $self.fingerprints[h0]
+                 ^ $self.fingerprints[(h1 + $self.block_length)]
+                 ^ $self.fingerprints[(h2 + 2 * $self.block_length)]
+         }
+     };
+ );
 
 /// Creates an `from(&[u64])` implementation for an xor filter of fingerprint type `$fpty`.
 #[doc(hidden)]
@@ -143,12 +125,8 @@ macro_rules! from_impl(
     ($keys:ident fingerprint $fpty:ty) => {
         {
             use $crate::{
-                fingerprint,
-                h,
-                make_block,
-                prelude::{HashSet, HSet, KeyIndex},
+                prelude::{HashSet, HSet, KeyIndex, sets_block, try_enqueue, fingerprint, h},
                 splitmix64::splitmix64,
-                try_enqueue,
             };
 
             // See Algorithm 3 in the paper.
@@ -159,17 +137,17 @@ macro_rules! from_impl(
 
             #[allow(non_snake_case)]
             let mut H: [Box<[HSet]>; 3] = [
-                make_block!(capacity sets of HSet),
-                make_block!(capacity sets of HSet),
-                make_block!(capacity sets of HSet),
+                sets_block(capacity),
+                sets_block(capacity),
+                sets_block(capacity),
             ];
             #[allow(non_snake_case)]
             let mut Q: [Box<[KeyIndex]>; 3] = [
-                make_block!(capacity sets of KeyIndex),
-                make_block!(capacity sets of KeyIndex),
-                make_block!(capacity sets of KeyIndex),
+                sets_block(capacity),
+                sets_block(capacity),
+                sets_block(capacity),
             ];
-            let mut stack: Box<[KeyIndex]> = make_block!(capacity sets of KeyIndex);
+            let mut stack: Box<[KeyIndex]> = sets_block(capacity);
 
             let mut rng = 1;
             let mut seed = splitmix64(&mut rng);
@@ -189,8 +167,7 @@ macro_rules! from_impl(
                 let mut q_sizes: [usize; 3] = [0, 0, 0];
                 for b in 0..3 {
                     for idx in 0..(block_length) {
-                        try_enqueue!(block H[b], set #idx;
-                                     on queue block Q[b], of size q_sizes[b]);
+                        try_enqueue(&H[b], idx, &mut Q[b], &mut q_sizes[b]);
                     }
                 }
 
@@ -215,12 +192,11 @@ macro_rules! from_impl(
                                 // Remove the element from every other set and enqueue any sets that now only
                                 // have one element.
                                 for j in &[$a, $b] {
-                                    let idx = h!(index block *j, of length block_length, using ki.hash);
+                                    let idx = h(*j, ki.hash, block_length);
                                     H[*j][idx].mask ^= ki.hash;
                                     assert!(H[*j][idx].count != 0, "block {}, queue block size {}", $block, q_sizes[$block]);
                                     H[*j][idx].count -= 1;
-                                    try_enqueue!(block H[*j], set #idx;
-                                                 on queue block Q[*j], of size q_sizes[*j]);
+                                    try_enqueue(&H[*j], idx, &mut Q[*j], &mut q_sizes[*j]);
                                 }
                             }
                         };
@@ -246,12 +222,12 @@ macro_rules! from_impl(
 
             // Construct all fingerprints (see Algorithm 4 in the paper).
             #[allow(non_snake_case)]
-            let mut B = make_block!(capacity sets of $fpty);
+            let mut B = sets_block(capacity);
             for ki in stack.iter().rev() {
-                B[ki.index] = fingerprint!(ki.hash) as $fpty
-                    ^ B[h!(index block 0, of length block_length, using ki.hash)]
-                    ^ B[(h!(index block 1, of length block_length, using ki.hash) + block_length)]
-                    ^ B[(h!(index block 2, of length block_length, using ki.hash) + 2 * block_length)];
+                B[ki.index] = fingerprint(ki.hash) as $fpty
+                    ^ B[h(0, ki.hash, block_length)]
+                    ^ B[(h(1, ki.hash, block_length) + block_length)]
+                    ^ B[(h(2, ki.hash, block_length) + 2 * block_length)];
             }
 
             Self {
