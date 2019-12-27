@@ -1,7 +1,6 @@
 //! Common methods for xor filters.
 
 use crate::murmur3;
-use alloc::{boxed::Box, vec::Vec};
 
 /// A set of hashes indexing three blocks.
 pub struct HashSet {
@@ -71,31 +70,33 @@ pub const fn fingerprint(hash: u64) -> u64 {
 }
 
 /// Creates a block of sets, each set being of type T.
-#[inline]
-pub fn sets_block<T>(size: usize) -> Box<[T]> {
-    let mut sets_block = Vec::with_capacity(size);
-    unsafe {
-        sets_block.set_len(size);
-    }
-    sets_block.into_boxed_slice()
-}
+#[doc(hidden)]
+#[macro_export]
+macro_rules! make_block(
+    (with $size:ident sets) => {
+        {
+            let mut sets_block = Vec::with_capacity($size);
+            unsafe {
+                sets_block.set_len($size);
+            }
+            sets_block.into_boxed_slice()
+        }
+    };
+);
 
 /// Enqueues a set from the temporary construction array H if the set contains only one key.
-#[allow(non_snake_case)]
-#[inline]
-pub fn try_enqueue(
-    H_block: &[HSet],
-    idx: usize,
-    Q_block: &mut [KeyIndex],
-    qblock_size: &mut usize,
-) {
-    if H_block[idx].count == 1 {
-        Q_block[*qblock_size].index = idx;
-        // If there is only one key, the mask contains it wholly.
-        Q_block[*qblock_size].hash = H_block[idx].mask;
-        *qblock_size += 1;
-    }
-}
+#[doc(hidden)]
+#[macro_export]
+macro_rules! try_enqueue(
+    (block $H_block:expr, set #$idx:expr; on queue block $Q_block:expr, of size $qblock_size:expr) => {
+        if $H_block[$idx].count == 1 {
+            $Q_block[$qblock_size].index = $idx;
+            // If there is only one key, the mask contains it wholly.
+            $Q_block[$qblock_size].hash = $H_block[$idx].mask;
+            $qblock_size += 1;
+        }
+    };
+);
 
 /// Creates a `contains(u64)` implementation for an xor filter of fingerprint type `$fpty`.
 #[doc(hidden)]
@@ -125,8 +126,10 @@ macro_rules! from_impl(
     ($keys:ident fingerprint $fpty:ty) => {
         {
             use $crate::{
-                prelude::{HashSet, HSet, KeyIndex, sets_block, try_enqueue, fingerprint, h},
+                make_block,
+                prelude::{HashSet, HSet, KeyIndex, fingerprint, h},
                 splitmix64::splitmix64,
+                try_enqueue,
             };
 
             // See Algorithm 3 in the paper.
@@ -136,18 +139,18 @@ macro_rules! from_impl(
             let block_length = capacity / 3;
 
             #[allow(non_snake_case)]
-            let mut Q: [Box<[KeyIndex]>; 3] = [
-                sets_block(capacity),
-                sets_block(capacity),
-                sets_block(capacity),
+            let mut H: [Box<[HSet]>; 3] = [
+                make_block!(with capacity sets),
+                make_block!(with capacity sets),
+                make_block!(with capacity sets),
             ];
             #[allow(non_snake_case)]
-            let mut H: [Box<[HSet]>; 3] = [
-                sets_block(capacity),
-                sets_block(capacity),
-                sets_block(capacity),
+            let mut Q: [Box<[KeyIndex]>; 3] = [
+                make_block!(with capacity sets),
+                make_block!(with capacity sets),
+                make_block!(with capacity sets),
             ];
-            let mut stack: Box<[KeyIndex]> = sets_block(num_keys);
+            let mut stack: Box<[KeyIndex]> = make_block!(with num_keys sets);
 
             let mut rng = 1;
             let mut seed = splitmix64(&mut rng);
@@ -167,44 +170,45 @@ macro_rules! from_impl(
                 let mut q_sizes: [usize; 3] = [0, 0, 0];
                 for b in 0..3 {
                     for idx in 0..(block_length) {
-                        try_enqueue(&H[b], idx, &mut Q[b], &mut q_sizes[b]);
+                        try_enqueue!(block H[b], set #idx;
+                                     on queue block Q[b], of size q_sizes[b]);
                     }
                 }
 
                 let mut stack_size = 0;
                 while q_sizes.iter().sum::<usize>() > 0 {
                     macro_rules! dequeue(
-                         (block $block:expr, other blocks being $a:expr, $b:expr) => {
-                             while q_sizes[$block] > 0 {
-                                 // Remove an element from the queue.
-                                 q_sizes[$block] -= 1;
-                                 let mut ki = Q[$block][q_sizes[$block]];
-                                 if H[$block][ki.index].count == 0 {
-                                     continue;
-                                 }
+                        (block $block:expr, other blocks being $a:expr, $b:expr) => {
+                            while q_sizes[$block] > 0 {
+                                // Remove an element from the queue.
+                                q_sizes[$block] -= 1;
+                                let mut ki = Q[$block][q_sizes[$block]];
+                                if H[$block][ki.index].count == 0 {
+                                    continue;
+                                }
 
-                                 // If it's the only element in its respective set in H, add it to
-                                 // the output stack.
-                                 ki.index += $block * block_length;
-                                 stack[stack_size] = ki;
-                                 stack_size += 1;
+                                // If it's the only element in its respective set in H, add it to
+                                // the output stack.
+                                ki.index += $block * block_length;
+                                stack[stack_size] = ki;
+                                stack_size += 1;
 
-                                 // Remove the element from every other set and enqueue any sets
-                                 // that now only have one element.
-                                 for j in &[$a, $b] {
-                                     let idx = h(*j, ki.hash, block_length);
-                                     H[*j][idx].mask ^= ki.hash;
-                                     assert!(H[*j][idx].count != 0, "block {}, queue block size {}", $block, q_sizes[$block]);
-                                     H[*j][idx].count -= 1;
-                                     try_enqueue(&H[*j], idx, &mut Q[*j], &mut q_sizes[*j]);
-                                 }
-                             }
-                         };
-                     );
+                                // Remove the element from every other set and enqueue any sets
+                                // that now only have one element.
+                                for j in &[$a, $b] {
+                                    let idx = h(*j, ki.hash, block_length);
+                                    H[*j][idx].mask ^= ki.hash;
+                                    H[*j][idx].count -= 1;
+                                    try_enqueue!(block H[*j], set #idx;
+                                                 on queue block Q[*j], of size q_sizes[*j]);
+                                }
+                            }
+                        };
+                    );
 
-                     dequeue!(block 0, other blocks being 1, 2);
-                     dequeue!(block 1, other blocks being 0, 2);
-                     dequeue!(block 2, other blocks being 0, 1);
+                    dequeue!(block 0, other blocks being 1, 2);
+                    dequeue!(block 1, other blocks being 0, 2);
+                    dequeue!(block 2, other blocks being 0, 1);
                 }
 
                 if stack_size == num_keys {
@@ -222,7 +226,7 @@ macro_rules! from_impl(
 
             // Construct all fingerprints (see Algorithm 4 in the paper).
             #[allow(non_snake_case)]
-            let mut B = sets_block(capacity);
+            let mut B = make_block!(with capacity sets);
             for ki in stack.iter().rev() {
                 B[ki.index] = fingerprint(ki.hash) as $fpty
                     ^ B[h(0, ki.hash, block_length)]
