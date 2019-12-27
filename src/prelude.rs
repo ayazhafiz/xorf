@@ -101,6 +101,20 @@ macro_rules! make_block(
     };
 );
 
+/// Creates a block of sets, each set being of type T.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! try_enqueue(
+    (block $H_block:ident at set $idx:ident, queue block $Q_block:ident with size $qblock_size:ident) => {
+        if $H_block[$idx].count == 1 {
+            $Q_block[*$qblock_size].index = $idx;
+            // If there is only one key, the mask contains it wholly.
+            $Q_block[*$qblock_size].hash = $H_block[$idx].mask;
+            *$qblock_size += 1;
+        }
+    };
+);
+
 /// Enqueues a set from the temporary construction array H if the set contains only one key.
 #[allow(non_snake_case)]
 #[inline]
@@ -110,12 +124,7 @@ pub fn try_enqueue(
     Q_block: &mut [KeyIndex],
     qblock_size: &mut usize,
 ) {
-    if H_block[idx].count == 1 {
-        Q_block[*qblock_size].index = idx;
-        // If there is only one key, the mask contains it wholly.
-        Q_block[*qblock_size].hash = H_block[idx].mask;
-        *qblock_size += 1;
-    }
+    try_enqueue!(block H_block at set idx, queue block Q_block with size qblock_size)
 }
 
 /// Creates a `contains(u64)` implementation for an xor filter of fingerprint type `$fpty`.
