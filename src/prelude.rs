@@ -105,27 +105,15 @@ macro_rules! make_block(
 #[doc(hidden)]
 #[macro_export]
 macro_rules! try_enqueue(
-    (block $H_block:ident at set $idx:ident, queue block $Q_block:ident with size $qblock_size:ident) => {
+    (block $H_block:expr, set $idx:ident; queue block $Q_block:expr, with size $qblock_size:expr) => {
         if $H_block[$idx].count == 1 {
-            $Q_block[*$qblock_size].index = $idx;
+            $Q_block[$qblock_size].index = $idx;
             // If there is only one key, the mask contains it wholly.
-            $Q_block[*$qblock_size].hash = $H_block[$idx].mask;
-            *$qblock_size += 1;
+            $Q_block[$qblock_size].hash = $H_block[$idx].mask;
+            $qblock_size += 1;
         }
     };
 );
-
-/// Enqueues a set from the temporary construction array H if the set contains only one key.
-#[allow(non_snake_case)]
-#[inline]
-pub fn try_enqueue(
-    H_block: &[HSet],
-    idx: usize,
-    Q_block: &mut [KeyIndex],
-    qblock_size: &mut usize,
-) {
-    try_enqueue!(block H_block at set idx, queue block Q_block with size qblock_size)
-}
 
 /// Creates a `contains(u64)` implementation for an xor filter of fingerprint type `$fpty`.
 #[doc(hidden)]
@@ -158,8 +146,9 @@ macro_rules! from_impl(
                 fingerprint,
                 h,
                 make_block,
-                prelude::{HashSet, HSet, KeyIndex, try_enqueue},
+                prelude::{HashSet, HSet, KeyIndex},
                 splitmix64::splitmix64,
+                try_enqueue,
             };
 
             // See Algorithm 3 in the paper.
@@ -200,7 +189,7 @@ macro_rules! from_impl(
                 let mut q_sizes: [usize; 3] = [0, 0, 0];
                 for b in 0..3 {
                     for idx in 0..(block_length) {
-                        try_enqueue(&H[b], idx, &mut Q[b], &mut q_sizes[b]);
+                        try_enqueue!(block ( &H[b] ), set idx; queue block ( &mut Q[b] ), with size ( q_sizes[b] ));
                     }
                 }
 
@@ -228,7 +217,7 @@ macro_rules! from_impl(
                                     let idx = h!(index block *j, of length block_length, using ki.hash);
                                     H[*j][idx].mask ^= ki.hash;
                                     H[*j][idx].count -= 1;
-                                    try_enqueue(&H[*j], idx, &mut Q[*j], &mut q_sizes[*j]);
+                                    try_enqueue!(block ( &H[*j] ), set idx; queue block ( &mut Q[*j] ), with size ( q_sizes[*j] ));
                                 }
                             }
                         };
