@@ -34,6 +34,7 @@
 extern crate alloc;
 
 mod murmur3;
+mod prelude;
 mod splitmix64;
 
 mod xor16;
