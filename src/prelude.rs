@@ -85,18 +85,21 @@ macro_rules! make_block(
 );
 
 /// Enqueues a set from the temporary construction array H if the set contains only one key.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! try_enqueue(
-    (block $H_block:expr, set #$idx:expr; on queue block $Q_block:expr, of size $qblock_size:expr) => {
-        if $H_block[$idx].count == 1 {
-            $Q_block[$qblock_size].index = $idx;
-            // If there is only one key, the mask contains it wholly.
-            $Q_block[$qblock_size].hash = $H_block[$idx].mask;
-            $qblock_size += 1;
-        }
-    };
-);
+#[allow(non_snake_case)]
+#[inline]
+pub fn try_enqueue(
+    H_block: &[HSet],
+    idx: usize,
+    Q_block: &mut [KeyIndex],
+    qblock_size: &mut usize,
+) {
+    if H_block[idx].count == 1 {
+        Q_block[*qblock_size].index = idx;
+        // If there is only one key, the mask contains it wholly.
+        Q_block[*qblock_size].hash = H_block[idx].mask;
+        *qblock_size += 1;
+    }
+}
 
 /// Creates a `contains(u64)` implementation for an xor filter of fingerprint type `$fpty`.
 #[doc(hidden)]
@@ -127,9 +130,8 @@ macro_rules! from_impl(
         {
             use $crate::{
                 make_block,
-                prelude::{HashSet, HSet, KeyIndex, fingerprint, h},
+                prelude::{HashSet, HSet, KeyIndex, try_enqueue, fingerprint, h},
                 splitmix64::splitmix64,
-                try_enqueue,
             };
 
             // See Algorithm 3 in the paper.
@@ -139,13 +141,13 @@ macro_rules! from_impl(
             let block_length = capacity / 3;
 
             #[allow(non_snake_case)]
-            let mut H: [Box<[HSet]>; 3] = [
+            let mut Q: [Box<[KeyIndex]>; 3] = [
                 make_block!(with capacity sets),
                 make_block!(with capacity sets),
                 make_block!(with capacity sets),
             ];
             #[allow(non_snake_case)]
-            let mut Q: [Box<[KeyIndex]>; 3] = [
+            let mut H: [Box<[HSet]>; 3] = [
                 make_block!(with capacity sets),
                 make_block!(with capacity sets),
                 make_block!(with capacity sets),
@@ -170,45 +172,43 @@ macro_rules! from_impl(
                 let mut q_sizes: [usize; 3] = [0, 0, 0];
                 for b in 0..3 {
                     for idx in 0..(block_length) {
-                        try_enqueue!(block H[b], set #idx;
-                                     on queue block Q[b], of size q_sizes[b]);
+                        try_enqueue(&H[b], idx, &mut Q[b], &mut q_sizes[b]);
                     }
                 }
 
                 let mut stack_size = 0;
                 while q_sizes.iter().sum::<usize>() > 0 {
                     macro_rules! dequeue(
-                        (block $block:expr, other blocks being $a:expr, $b:expr) => {
-                            while q_sizes[$block] > 0 {
-                                // Remove an element from the queue.
-                                q_sizes[$block] -= 1;
-                                let mut ki = Q[$block][q_sizes[$block]];
-                                if H[$block][ki.index].count == 0 {
-                                    continue;
-                                }
+                         (block $block:expr, other blocks being $a:expr, $b:expr) => {
+                             while q_sizes[$block] > 0 {
+                                 // Remove an element from the queue.
+                                 q_sizes[$block] -= 1;
+                                 let mut ki = Q[$block][q_sizes[$block]];
+                                 if H[$block][ki.index].count == 0 {
+                                     continue;
+                                 }
 
-                                // If it's the only element in its respective set in H, add it to
-                                // the output stack.
-                                ki.index += $block * block_length;
-                                stack[stack_size] = ki;
-                                stack_size += 1;
+                                 // If it's the only element in its respective set in H, add it to
+                                 // the output stack.
+                                 ki.index += $block * block_length;
+                                 stack[stack_size] = ki;
+                                 stack_size += 1;
 
-                                // Remove the element from every other set and enqueue any sets
-                                // that now only have one element.
-                                for j in &[$a, $b] {
-                                    let idx = h(*j, ki.hash, block_length);
-                                    H[*j][idx].mask ^= ki.hash;
-                                    H[*j][idx].count -= 1;
-                                    try_enqueue!(block H[*j], set #idx;
-                                                 on queue block Q[*j], of size q_sizes[*j]);
-                                }
-                            }
-                        };
-                    );
+                                 // Remove the element from every other set and enqueue any sets
+                                 // that now only have one element.
+                                 for j in &[$a, $b] {
+                                     let idx = h(*j, ki.hash, block_length);
+                                     H[*j][idx].mask ^= ki.hash;
+                                     H[*j][idx].count -= 1;
+                                     try_enqueue(&H[*j], idx, &mut Q[*j], &mut q_sizes[*j]);
+                                 }
+                             }
+                         };
+                     );
 
-                    dequeue!(block 0, other blocks being 1, 2);
-                    dequeue!(block 1, other blocks being 0, 2);
-                    dequeue!(block 2, other blocks being 0, 1);
+                     dequeue!(block 0, other blocks being 1, 2);
+                     dequeue!(block 1, other blocks being 0, 2);
+                     dequeue!(block 2, other blocks being 0, 1);
                 }
 
                 if stack_size == num_keys {
