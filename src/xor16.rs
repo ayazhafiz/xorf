@@ -123,7 +123,7 @@ pub struct Xor16 {
 }
 
 impl Filter for Xor16 {
-    /// Returns `true` if the filter contains the specified key. Has a false positive rate of <4%.
+    /// Returns `true` if the filter contains the specified key. Has a false positive rate of <0.02%.
     fn contains(&self, key: u64) -> bool {
         let HashSet {
             hash,

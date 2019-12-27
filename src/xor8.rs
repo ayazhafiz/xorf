@@ -78,7 +78,7 @@ const fn fingerprint(hash: u64) -> u64 {
 /// Xor filter using 8-bit fingerprints.
 ///
 /// An `Xor8` filter uses <10 bits per entry of the set is it constructed from, and has a false
-/// positive rate of <4%. As with other probabilistic filters, a higher number of entries decreases
+/// positive rate of <0.4%. As with other probabilistic filters, a higher number of entries decreases
 /// the bits per entry but increases the false positive rate.
 ///
 /// An `Xor8` is constructed from a set of 64-bit unsigned integers and is immutable.
@@ -123,7 +123,7 @@ pub struct Xor8 {
 }
 
 impl Filter for Xor8 {
-    /// Returns `true` if the filter contains the specified key. Has a false positive rate of <4%.
+    /// Returns `true` if the filter contains the specified key. Has a false positive rate of <0.4%.
     fn contains(&self, key: u64) -> bool {
         let HashSet {
             hash,
