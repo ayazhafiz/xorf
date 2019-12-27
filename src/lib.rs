@@ -31,15 +31,20 @@
 #![forbid(clippy::all, clippy::cargo, clippy::nursery)]
 #![allow(clippy::len_without_is_empty, clippy::useless_attribute)]
 
+#[macro_use]
 extern crate alloc;
 
 mod murmur3;
 mod prelude;
 mod splitmix64;
 
+mod fuse16;
+mod fuse8;
 mod xor16;
 mod xor8;
 
+pub use fuse16::Fuse16;
+pub use fuse8::Fuse8;
 pub use xor16::Xor16;
 pub use xor8::Xor8;
 

@@ -1,31 +1,33 @@
-//! Implements Xor8 filters as described in [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters].
-//!
-//! [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters]: https://arxiv.org/abs/1912.08258
+//! Implements Fuse8 filters.
 
-use crate::{xor_contains_impl, xor_from_impl, Filter};
+use crate::{fuse_contains_impl, fuse_from_impl, Filter};
 use alloc::{boxed::Box, vec::Vec};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Xor filter using 8-bit fingerprints.
+/// Xor filter using 8-bit fingerprints in a [fuse graph]. Requires less space than an [`Xor8`].
 ///
-/// An `Xor8` filter uses <10 bits per entry of the set is it constructed from, and has a false
+/// A `Fuse8` filter uses <9.101 bits per entry of the set is it constructed from, and has a false
 /// positive rate of <0.4%. As with other probabilistic filters, a higher number of entries decreases
 /// the bits per entry but increases the false positive rate.
 ///
-/// An `Xor8` is constructed from a set of 64-bit unsigned integers and is immutable.
+/// A `Fuse8` filter uses less space and is faster to construct than an [`Xor8`] filter, but
+/// requires a large number of keys to be constructed. Experimentally, this number is somewhere
+/// >100_000. For smaller key sets, prefer the [`Xor8`] filter.
+///
+/// A `Fuse8` is constructed from a set of 64-bit unsigned integers and is immutable.
 ///
 /// ```
 /// # extern crate alloc;
-/// use xorf::{Filter, Xor8};
+/// use xorf::{Filter, Fuse8};
 /// # use alloc::vec::Vec;
 /// # use rand::Rng;
 ///
 /// # let mut rng = rand::thread_rng();
 /// const SAMPLE_SIZE: usize = 1_000_000;
 /// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
-/// let filter = Xor8::from(&keys);
+/// let filter = Fuse8::from(&keys);
 ///
 /// // no false negatives
 /// for key in keys {
@@ -34,7 +36,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// // bits per entry
 /// let bpe = (filter.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
-/// assert!(bpe < 10., "Bits per entry is {}", bpe);
+/// assert!(bpe < 9.101, "Bits per entry is {}", bpe);
 ///
 /// // false positive rate
 /// let false_positives: usize = (0..SAMPLE_SIZE)
@@ -45,20 +47,22 @@ use serde::{Deserialize, Serialize};
 /// assert!(fp_rate < 0.4, "False positive rate is {}", fp_rate);
 /// ```
 ///
-/// Serializing and deserializing `Xor8` filters can be enabled with the [`serde`] feature.
+/// Serializing and deserializing `Fuse8` filters can be enabled with the [`serde`] feature.
 ///
+/// [fuse graph]: https://arxiv.org/abs/1907.04749
+/// [`Xor8`]: crate::Xor8
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Xor8 {
+pub struct Fuse8 {
     seed: u64,
-    block_length: usize,
+    segment_length: usize,
     fingerprints: Box<[u8]>,
 }
 
-impl Filter for Xor8 {
+impl Filter for Fuse8 {
     /// Returns `true` if the filter contains the specified key. Has a false positive rate of <0.4%.
     fn contains(&self, key: u64) -> bool {
-        xor_contains_impl!(key, self, fingerprint u8)
+        fuse_contains_impl!(key, self, fingerprint u8)
     }
 
     fn len(&self) -> usize {
@@ -66,13 +70,13 @@ impl Filter for Xor8 {
     }
 }
 
-impl From<&[u64]> for Xor8 {
+impl From<&[u64]> for Fuse8 {
     fn from(keys: &[u64]) -> Self {
-        xor_from_impl!(keys fingerprint u8)
+        fuse_from_impl!(keys fingerprint u8)
     }
 }
 
-impl From<&Vec<u64>> for Xor8 {
+impl From<&Vec<u64>> for Fuse8 {
     fn from(v: &Vec<u64>) -> Self {
         Self::from(v.as_slice())
     }
@@ -80,7 +84,7 @@ impl From<&Vec<u64>> for Xor8 {
 
 #[cfg(test)]
 mod test {
-    use crate::{Filter, Xor8};
+    use crate::{Filter, Fuse8};
 
     use alloc::vec::Vec;
     use rand::Rng;
@@ -91,7 +95,7 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Xor8::from(&keys);
+        let filter = Fuse8::from(&keys);
 
         for key in keys {
             assert!(filter.contains(key));
@@ -104,10 +108,10 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Xor8::from(&keys);
+        let filter = Fuse8::from(&keys);
         let bpe = (filter.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
 
-        assert!(bpe < 10., "Bits per entry is {}", bpe);
+        assert!(bpe < 9.101, "Bits per entry is {}", bpe);
     }
 
     #[test]
@@ -116,7 +120,7 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Xor8::from(&keys);
+        let filter = Fuse8::from(&keys);
 
         let false_positives: usize = (0..SAMPLE_SIZE)
             .map(|_| rng.gen())

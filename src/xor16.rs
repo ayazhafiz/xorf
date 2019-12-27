@@ -2,7 +2,7 @@
 //!
 //! [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters]: https://arxiv.org/abs/1912.08258
 
-use crate::{contains_impl, from_impl, Filter};
+use crate::{xor_contains_impl, xor_from_impl, Filter};
 use alloc::{boxed::Box, vec::Vec};
 
 #[cfg(feature = "serde")]
@@ -58,7 +58,7 @@ pub struct Xor16 {
 impl Filter for Xor16 {
     /// Returns `true` if the filter contains the specified key. Has a false positive rate of <0.02%.
     fn contains(&self, key: u64) -> bool {
-        contains_impl!(key, self, fingerprint u16)
+        xor_contains_impl!(key, self, fingerprint u16)
     }
 
     fn len(&self) -> usize {
@@ -68,7 +68,7 @@ impl Filter for Xor16 {
 
 impl From<&[u64]> for Xor16 {
     fn from(keys: &[u64]) -> Self {
-        from_impl!(keys fingerprint u16)
+        xor_from_impl!(keys fingerprint u16)
     }
 }
 
