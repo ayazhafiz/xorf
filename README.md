@@ -24,6 +24,12 @@ filter libraries.
 
 This library is `no_std` and
 [`needs_allocator`](https://doc.rust-lang.org/1.9.0/book/custom-allocators.html).
+Currently, the following xor filters are provided:
+
+- [`Xor8`](./src/xor8.rs)
+- [`Xor16`](./src/xor16.rs)
+- [`Fuse8`](./src/fuse8.rs)
+- [`Fuse16`](./src/fuse16.rs)
 
 ## Installation
 
