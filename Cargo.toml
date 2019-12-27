@@ -31,4 +31,22 @@ repository = "ayazhafiz/xorf"
 serde = { version = "1.0.104", optional = true, features = ["derive"] }
 
 [dev-dependencies]
+criterion = "0.3.0"
+criterion-macro = "0.3.0"
 rand = "0.7.2"
+
+[[bench]]
+name = "fuse16"
+harness = false
+
+[[bench]]
+name = "fuse8"
+harness = false
+
+[[bench]]
+name = "xor16"
+harness = false
+
+[[bench]]
+name = "xor8"
+harness = false
