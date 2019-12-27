@@ -1,83 +1,25 @@
-//! Common methods for xor filters.
-
-use crate::murmur3;
-
-/// A set of hashes indexing three blocks.
-pub struct HashSet {
-    /// Key hash
-    pub hash: u64,
-    /// Indexing hashes h_0, h_1, h_2 created with `hash`.
-    pub hset: [usize; 3],
-}
+use crate::prelude::HashSet;
 
 impl HashSet {
     #[inline]
-    pub const fn from(key: u64, block_length: usize, seed: u64) -> Self {
-        let hash = mix(key, seed);
+    pub const fn xor_from(key: u64, block_length: usize, seed: u64) -> Self {
+        let hash = crate::prelude::mix(key, seed);
 
         Self {
             hash,
             hset: [
-                crate::h!(index block 0, of length block_length, using hash),
-                crate::h!(index block 1, of length block_length, using hash),
-                crate::h!(index block 2, of length block_length, using hash),
+                crate::xor_h!(index block 0, of length block_length, using hash),
+                crate::xor_h!(index block 1, of length block_length, using hash),
+                crate::xor_h!(index block 2, of length block_length, using hash),
             ],
         }
     }
 }
 
-/// Applies a finalization mix to a randomly-seeded key, resulting in an avalanched hash. This
-/// helps avoid high false-positive ratios (see Section 4 in the paper).
-#[inline]
-const fn mix(key: u64, seed: u64) -> u64 {
-    murmur3::mix64(key.overflowing_add(seed).0)
-}
-
-/// The hash of a key and the index of that key in the construction array H.
-#[derive(Copy, Clone)]
-pub struct KeyIndex {
-    pub hash: u64,
-    pub index: usize,
-}
-
-/// A set in the construction array H. Elements are encoded via xor with the mask.
-#[derive(Default)]
-pub struct HSet {
-    pub count: u32,
-    pub mask: u64,
-}
-
-/// Computes a fingerprint.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! fingerprint(
-    ($hash:expr) => {
-        $hash ^ ($hash >> 32)
-    };
-);
-
-/// Rotate left
-#[doc(hidden)]
-#[macro_export]
-macro_rules! rotl64(
-    ($n:expr, by $c:expr) => {
-        ($n << ($c & 63)) | ($n >> ((-$c) & 63))
-    };
-);
-
-/// [A fast alternative to the modulo reduction](http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/)
-#[doc(hidden)]
-#[macro_export]
-macro_rules! reduce(
-    ($hash:ident on interval $n:expr) => {
-        (($hash as u64 * $n as u64) >> 32) as usize
-    };
-);
-
 /// Computes a hash indexing the i'th filter block.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! h(
+macro_rules! xor_h(
     (index block $i:expr, of length $block_length:expr, using $hash:expr) => {
         {
             let rot = $crate::rotl64!($hash, by (($i as isize) * 21)) as u32; // shift hash to correct block interval
@@ -86,65 +28,36 @@ macro_rules! h(
     };
 );
 
-/// Creates a block of sets, each set being of type T.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! make_block(
-    (with $size:ident sets) => {
-        {
-            let mut sets_block = Vec::with_capacity($size);
-            unsafe {
-                sets_block.set_len($size);
-            }
-            sets_block.into_boxed_slice()
-        }
-    };
-);
-
-/// Creates a block of sets, each set being of type T.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! try_enqueue(
-    (block $H_block:expr, set $idx:ident; queue block $Q_block:expr, with size $qblock_size:expr) => {
-        if $H_block[$idx].count == 1 {
-            $Q_block[$qblock_size].index = $idx;
-            // If there is only one key, the mask contains it wholly.
-            $Q_block[$qblock_size].hash = $H_block[$idx].mask;
-            $qblock_size += 1;
-        }
-    };
-);
-
 /// Creates a `contains(u64)` implementation for an xor filter of fingerprint type `$fpty`.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! contains_impl(
-     ($key:ident, $self:expr, fingerprint $fpty:ty) => {
-         {
-             use $crate::prelude::HashSet;
+macro_rules! xor_contains_impl(
+    ($key:ident, $self:expr, fingerprint $fpty:ty) => {
+        {
+            use $crate::prelude::HashSet;
 
-             let HashSet {
-                 hash,
-                 hset: [h0, h1, h2],
-             } = HashSet::from($key, $self.block_length, $self.seed);
-             let fp = $crate::fingerprint!(hash) as $fpty;
+            let HashSet {
+                hash,
+                hset: [h0, h1, h2],
+            } = HashSet::xor_from($key, $self.block_length, $self.seed);
+            let fp = $crate::fingerprint!(hash) as $fpty;
 
-             fp == $self.fingerprints[h0]
-                 ^ $self.fingerprints[(h1 + $self.block_length)]
-                 ^ $self.fingerprints[(h2 + 2 * $self.block_length)]
-         }
-     };
+            fp == $self.fingerprints[h0]
+                ^ $self.fingerprints[(h1 + $self.block_length)]
+                ^ $self.fingerprints[(h2 + 2 * $self.block_length)]
+        }
+    };
  );
 
 /// Creates an `from(&[u64])` implementation for an xor filter of fingerprint type `$fpty`.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! from_impl(
+macro_rules! xor_from_impl(
     ($keys:ident fingerprint $fpty:ty) => {
         {
             use $crate::{
                 fingerprint,
-                h,
+                xor_h,
                 make_block,
                 prelude::{HashSet, HSet, KeyIndex},
                 splitmix64::splitmix64,
@@ -158,13 +71,13 @@ macro_rules! from_impl(
             let block_length = capacity / 3;
 
             #[allow(non_snake_case)]
-            let mut Q: [Box<[KeyIndex]>; 3] = [
+            let mut H: [Box<[HSet]>; 3] = [
                 make_block!(with capacity sets),
                 make_block!(with capacity sets),
                 make_block!(with capacity sets),
             ];
             #[allow(non_snake_case)]
-            let mut H: [Box<[HSet]>; 3] = [
+            let mut Q: [Box<[KeyIndex]>; 3] = [
                 make_block!(with capacity sets),
                 make_block!(with capacity sets),
                 make_block!(with capacity sets),
@@ -176,7 +89,7 @@ macro_rules! from_impl(
             loop {
                 // Populate H by adding each key to its respective set.
                 for key in $keys.iter() {
-                    let HashSet { hash, hset } = HashSet::from(*key, block_length, seed);
+                    let HashSet { hash, hset } = HashSet::xor_from(*key, block_length, seed);
 
                     for b in 0..3 {
                         let setindex = hset[b];
@@ -215,7 +128,7 @@ macro_rules! from_impl(
                                 // Remove the element from every other set and enqueue any sets
                                 // that now only have one element.
                                 for j in &[$a, $b] {
-                                    let idx = h!(index block *j, of length block_length, using ki.hash);
+                                    let idx = xor_h!(index block *j, of length block_length, using ki.hash);
                                     H[*j][idx].mask ^= ki.hash;
                                     H[*j][idx].count -= 1;
                                     try_enqueue!(block H[*j], set idx;
@@ -245,12 +158,12 @@ macro_rules! from_impl(
 
             // Construct all fingerprints (see Algorithm 4 in the paper).
             #[allow(non_snake_case)]
-            let mut B = make_block!(with capacity sets);
+            let mut B: Box<[$fpty]> = make_block!(with capacity sets);
             for ki in stack.iter().rev() {
                 B[ki.index] = fingerprint!(ki.hash) as $fpty
-                    ^ B[h!(index block 0, of length block_length, using ki.hash)]
-                    ^ B[(h!(index block 1, of length block_length, using ki.hash) + block_length)]
-                    ^ B[(h!(index block 2, of length block_length, using ki.hash) + 2 * block_length)];
+                    ^ B[xor_h!(index block 0, of length block_length, using ki.hash)]
+                    ^ B[(xor_h!(index block 1, of length block_length, using ki.hash) + block_length)]
+                    ^ B[(xor_h!(index block 2, of length block_length, using ki.hash) + 2 * block_length)];
             }
 
             Self {
