@@ -18,7 +18,7 @@ matrix:
 
     - name: "Stable - Test"
       rust: stable
-      script: RUST_BACKTRACE=1 cargo test
+      script: RUST_BACKTRACE=full cargo test
 
     - name: "Nightly - LintFormat"
       rust: nightly
@@ -33,7 +33,7 @@ matrix:
       before_script:
         - cargo install cargo-expand
         - cargo expand
-      script: RUST_BACKTRACE=1 cargo test
+      script: RUST_BACKTRACE=full cargo test
 
   allow_failures:
     - rust: nightly
