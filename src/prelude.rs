@@ -190,7 +190,7 @@ macro_rules! from_impl(
                 for b in 0..3 {
                     for idx in 0..(block_length) {
                         try_enqueue!(block &H[b], set idx;
-                                     queue block &mut Q[b], with size q_sizes[b]);
+                                     queue block Q[b], with size q_sizes[b]);
                     }
                 }
 
@@ -219,7 +219,7 @@ macro_rules! from_impl(
                                     H[*j][idx].mask ^= ki.hash;
                                     H[*j][idx].count -= 1;
                                     try_enqueue!(block &H[*j], set idx;
-                                                 queue block &mut Q[*j], with size q_sizes[*j]);
+                                                 queue block Q[*j], with size q_sizes[*j]);
                                 }
                             }
                         };
