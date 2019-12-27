@@ -58,7 +58,7 @@ pub struct Xor8 {
 impl Filter for Xor8 {
     /// Returns `true` if the filter contains the specified key. Has a false positive rate of <0.4%.
     fn contains(&self, key: u64) -> bool {
-        contains_impl!(key, &self, fingerprint u8)
+        contains_impl!(key, self, fingerprint u8)
     }
 
     fn len(&self) -> usize {

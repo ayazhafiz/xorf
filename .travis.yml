@@ -18,6 +18,9 @@ matrix:
 
     - name: "Stable - Test"
       rust: stable
+      before_script:
+        - cargo install cargo-expand
+        - cargo expand
       script: RUST_BACKTRACE=1 cargo test
 
     - name: "Nightly - LintFormat"

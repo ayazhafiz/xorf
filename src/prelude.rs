@@ -196,66 +196,38 @@ macro_rules! from_impl(
 
                 let mut stack_size = 0;
                 while q_sizes.iter().sum::<usize>() > 0 {
-                    while q_sizes[0] > 0 {
-                        // Remove an element from the queue.
-                        q_sizes[0] -= 1;
-                        let ki = Q[0][q_sizes[0]];
-                        if H[0][ki.index].count == 0 {
-                            continue;
-                        }
-                        // If it's the only element in its respective set in H, add it to the output
-                        // stack.
-                        stack[stack_size] = ki;
-                        stack_size += 1;
+                    macro_rules! dequeue(
+                        (block $block:expr, other blocks being $a:expr, $b:expr) => {
+                            while q_sizes[$block] > 0 {
+                                // Remove an element from the queue.
+                                q_sizes[$block] -= 1;
+                                let mut ki = Q[$block][q_sizes[$block]];
+                                if H[$block][ki.index].count == 0 {
+                                    continue;
+                                }
 
-                        // Remove the element from every other set and enqueue any sets that now only
-                        // have one element.
-                        for j in &[1, 2] {
-                            let idx = h!(index block *j, of length block_length, using ki.hash);
-                            H[*j][idx].mask ^= ki.hash;
-                            H[*j][idx].count -= 1;
-                            try_enqueue!(block H[*j], set #idx;
-                                         on queue block Q[*j], of size q_sizes[*j]);
-                        }
-                    }
+                                // If it's the only element in its respective set in H, add it to the output
+                                // stack.
+                                ki.index += $block * block_length;
+                                stack[stack_size] = ki;
+                                stack_size += 1;
 
-                    while q_sizes[1] > 0 {
-                        q_sizes[1] -= 1;
-                        let mut ki = Q[1][q_sizes[1]];
-                        if H[1][ki.index].count == 0 {
-                            continue;
-                        }
-                        ki.index += block_length;
-                        stack[stack_size] = ki;
-                        stack_size += 1;
+                                // Remove the element from every other set and enqueue any sets that now only
+                                // have one element.
+                                for j in &[$a, $b] {
+                                    let idx = h!(index block *j, of length block_length, using ki.hash);
+                                    H[*j][idx].mask ^= ki.hash;
+                                    H[*j][idx].count -= 1;
+                                    try_enqueue!(block H[*j], set #idx;
+                                                 on queue block Q[*j], of size q_sizes[*j]);
+                                }
+                            }
+                        };
+                    );
 
-                        for j in &[0, 2] {
-                            let idx = h!(index block *j, of length block_length, using ki.hash);
-                            H[*j][idx].mask ^= ki.hash;
-                            H[*j][idx].count -= 1;
-                            try_enqueue!(block H[*j], set #idx;
-                                         on queue block Q[*j], of size q_sizes[*j]);
-                        }
-                    }
-
-                    while q_sizes[2] > 0 {
-                        q_sizes[2] -= 1;
-                        let mut ki = Q[2][q_sizes[2]];
-                        if H[2][ki.index].count == 0 {
-                            continue;
-                        }
-                        ki.index += 2 * block_length;
-                        stack[stack_size] = ki;
-                        stack_size += 1;
-
-                        for j in &[0, 1] {
-                            let idx = h!(index block *j, of length block_length, using ki.hash);
-                            H[*j][idx].mask ^= ki.hash;
-                            H[*j][idx].count -= 1;
-                            try_enqueue!(block H[*j], set #idx;
-                                         on queue block Q[*j], of size q_sizes[*j]);
-                        }
-                    }
+                    dequeue!(block 0, other blocks being 1, 2);
+                    dequeue!(block 1, other blocks being 0, 2);
+                    dequeue!(block 2, other blocks being 0, 1);
                 }
 
                 if stack_size == num_keys {
