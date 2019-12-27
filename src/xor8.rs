@@ -337,7 +337,7 @@ mod test {
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
         let filter = Xor8::from(&keys);
-        let bpe = (filter.fingerprints.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
+        let bpe = (filter.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
 
         assert!(bpe < 10., "Bits per entry is {}", bpe);
     }
