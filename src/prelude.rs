@@ -217,6 +217,7 @@ macro_rules! from_impl(
                                 for j in &[$a, $b] {
                                     let idx = h!(index block *j, of length block_length, using ki.hash);
                                     H[*j][idx].mask ^= ki.hash;
+                                    assert!(H[*j][idx].count != 0, "block {}, queue block size {}", $block, q_sizes[$block]);
                                     H[*j][idx].count -= 1;
                                     try_enqueue!(block H[*j], set #idx;
                                                  on queue block Q[*j], of size q_sizes[*j]);
