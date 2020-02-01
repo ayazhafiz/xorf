@@ -2,6 +2,7 @@
 
 use crate::{fuse_contains_impl, fuse_from_impl, Filter};
 use alloc::{boxed::Box, vec::Vec};
+use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -14,20 +15,22 @@ use serde::{Deserialize, Serialize};
 ///
 /// A `Fuse8` filter uses less space and is faster to construct than an [`Xor8`] filter, but
 /// requires a large number of keys to be constructed. Experimentally, this number is somewhere
-/// >100_000. For smaller key sets, prefer the [`Xor8`] filter.
+/// >100_000. For smaller key sets, prefer the [`Xor8`] filter. A `Fuse8` filter may fail to be
+/// constructed.
 ///
 /// A `Fuse8` is constructed from a set of 64-bit unsigned integers and is immutable.
 ///
 /// ```
 /// # extern crate alloc;
 /// use xorf::{Filter, Fuse8};
+/// use core::convert::TryFrom;
 /// # use alloc::vec::Vec;
 /// # use rand::Rng;
 ///
 /// # let mut rng = rand::thread_rng();
 /// const SAMPLE_SIZE: usize = 1_000_000;
 /// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
-/// let filter = Fuse8::from(&keys);
+/// let filter = Fuse8::try_from(&keys).unwrap();
 ///
 /// // no false negatives
 /// for key in keys {
@@ -53,6 +56,7 @@ use serde::{Deserialize, Serialize};
 /// [`Xor8`]: crate::Xor8
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug)]
 pub struct Fuse8 {
     seed: u64,
     segment_length: usize,
@@ -70,21 +74,26 @@ impl Filter for Fuse8 {
     }
 }
 
-impl From<&[u64]> for Fuse8 {
-    fn from(keys: &[u64]) -> Self {
-        fuse_from_impl!(keys fingerprint u8)
+impl TryFrom<&[u64]> for Fuse8 {
+    type Error = &'static str;
+
+    fn try_from(keys: &[u64]) -> Result<Self, Self::Error> {
+        fuse_from_impl!(keys fingerprint u8, max iter 1_000)
     }
 }
 
-impl From<&Vec<u64>> for Fuse8 {
-    fn from(v: &Vec<u64>) -> Self {
-        Self::from(v.as_slice())
+impl TryFrom<&Vec<u64>> for Fuse8 {
+    type Error = &'static str;
+
+    fn try_from(v: &Vec<u64>) -> Result<Self, Self::Error> {
+        Self::try_from(v.as_slice())
     }
 }
 
 #[cfg(test)]
 mod test {
     use crate::{Filter, Fuse8};
+    use core::convert::TryFrom;
 
     use alloc::vec::Vec;
     use rand::Rng;
@@ -95,7 +104,7 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Fuse8::from(&keys);
+        let filter = Fuse8::try_from(&keys).unwrap();
 
         for key in keys {
             assert!(filter.contains(key));
@@ -108,7 +117,7 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Fuse8::from(&keys);
+        let filter = Fuse8::try_from(&keys).unwrap();
         let bpe = (filter.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
 
         assert!(bpe < 9.101, "Bits per entry is {}", bpe);
@@ -120,7 +129,7 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = Fuse8::from(&keys);
+        let filter = Fuse8::try_from(&keys).unwrap();
 
         let false_positives: usize = (0..SAMPLE_SIZE)
             .map(|_| rng.gen())
@@ -128,5 +137,15 @@ mod test {
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
         assert!(fp_rate < 0.4, "False positive rate is {}", fp_rate);
+    }
+
+    #[test]
+    fn test_fail_construction() {
+        const SAMPLE_SIZE: usize = 1_000;
+        let mut rng = rand::thread_rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+
+        let filter = Fuse8::try_from(&keys);
+        assert!(filter.expect_err("") == "Failed to construct fuse filter.");
     }
 }

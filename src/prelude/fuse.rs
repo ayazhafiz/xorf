@@ -68,7 +68,7 @@ macro_rules! fuse_contains_impl(
 #[doc(hidden)]
 #[macro_export]
 macro_rules! fuse_from_impl(
-    ($keys:ident fingerprint $fpty:ty) => {
+    ($keys:ident fingerprint $fpty:ty, max iter $max_iter:expr) => {
         {
             use $crate::{
                 fingerprint,
@@ -95,7 +95,8 @@ macro_rules! fuse_from_impl(
 
             let mut rng = 1;
             let mut seed = splitmix64(&mut rng);
-            loop {
+            let mut done = false;
+            for _ in 0..$max_iter {
                 // Populate H by adding each key to its respective set.
                 for key in $keys.iter() {
                     let HashSet { hash, hset } = HashSet::fuse_from(*key, segment_length, seed);
@@ -136,6 +137,7 @@ macro_rules! fuse_from_impl(
                 }
 
                 if stack_size == num_keys {
+                    done = true;
                     break;
                 }
 
@@ -144,6 +146,10 @@ macro_rules! fuse_from_impl(
                     *set = HSet::default();
                 }
                 seed = splitmix64(&mut rng)
+            }
+
+            if !done {
+                return Err("Failed to construct fuse filter.");
             }
 
             // Construct all fingerprints (see Algorithm 4 in the paper).
@@ -161,11 +167,11 @@ macro_rules! fuse_from_impl(
                 B[ki.index] = fp;
             }
 
-            Self {
+            Ok(Self {
                 seed,
                 segment_length,
                 fingerprints: B,
-            }
+            })
         }
     };
 );
