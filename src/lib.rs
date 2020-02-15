@@ -26,10 +26,13 @@
 
 #![no_std]
 #![cfg_attr(feature = "nightly", feature(allocator_internals), needs_allocator)]
-// Configuration attributes
 #![warn(missing_docs)]
 #![forbid(clippy::all, clippy::cargo, clippy::nursery)]
-#![allow(clippy::len_without_is_empty, clippy::useless_attribute)]
+#![allow(
+    clippy::len_without_is_empty,
+    clippy::useless_attribute,
+    clippy::multiple_crate_versions
+)]
 
 #[macro_use]
 extern crate alloc;
