@@ -32,7 +32,7 @@ macro_rules! xor_h(
 #[doc(hidden)]
 #[macro_export]
 macro_rules! xor_contains_impl(
-    ($key:ident, $self:expr, fingerprint $fpty:ty) => {
+    ($key:expr, $self:expr, fingerprint $fpty:ty) => {
         {
             use $crate::prelude::HashSet;
 
