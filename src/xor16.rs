@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// // no false negatives
 /// for key in keys {
-///     assert!(filter.contains(key));
+///     assert!(filter.contains(&key));
 /// }
 ///
 /// // bits per entry
@@ -39,7 +39,7 @@ use serde::{Deserialize, Serialize};
 /// // false positive rate
 /// let false_positives: usize = (0..SAMPLE_SIZE)
 ///     .map(|_| rng.gen())
-///     .filter(|n| filter.contains(*n))
+///     .filter(|n| filter.contains(n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
 /// assert!(fp_rate < 0.02, "False positive rate is {}", fp_rate);
@@ -55,10 +55,10 @@ pub struct Xor16 {
     fingerprints: Box<[u16]>,
 }
 
-impl Filter for Xor16 {
+impl Filter<u64> for Xor16 {
     /// Returns `true` if the filter contains the specified key. Has a false positive rate of <0.02%.
-    fn contains(&self, key: u64) -> bool {
-        xor_contains_impl!(key, self, fingerprint u16)
+    fn contains(&self, key: &u64) -> bool {
+        xor_contains_impl!(*key, self, fingerprint u16)
     }
 
     fn len(&self) -> usize {
@@ -94,7 +94,7 @@ mod test {
         let filter = Xor16::from(&keys);
 
         for key in keys {
-            assert!(filter.contains(key));
+            assert!(filter.contains(&key));
         }
     }
 
@@ -120,7 +120,7 @@ mod test {
 
         let false_positives: usize = (0..SAMPLE_SIZE)
             .map(|_| rng.gen())
-            .filter(|n| filter.contains(*n))
+            .filter(|n| filter.contains(n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
         assert!(fp_rate < 0.02, "False positive rate is {}", fp_rate);

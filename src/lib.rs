@@ -52,12 +52,12 @@ pub use xor16::Xor16;
 pub use xor8::Xor8;
 
 /// Methods common to xor filters.
-pub trait Filter {
+pub trait Filter<Type> {
     /// Returns `true` if the filter probably contains the specified key.
     ///
     /// There can never be a false negative, but there is a small possibility of false positives.
     /// Refer to individual filters' documentation for false positive rates.
-    fn contains(&self, key: u64) -> bool;
+    fn contains(&self, key: &Type) -> bool;
 
     /// Returns the number of fingerprints in the filter.
     fn len(&self) -> usize;

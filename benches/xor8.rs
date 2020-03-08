@@ -30,7 +30,7 @@ fn contains(c: &mut Criterion) {
 
     group.bench_function(BenchmarkId::new("contains", SAMPLE_SIZE), |b| {
         let key = rng.gen();
-        b.iter(|| filter.contains(key));
+        b.iter(|| filter.contains(&key));
     });
 }
 
