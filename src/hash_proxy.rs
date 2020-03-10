@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 ///     .map(|_| rng.sample_iter(&Alphanumeric).take(30).collect())
 ///     .collect();
 ///
-/// let pw_filter: HashProxy<DefaultHasher, Xor8> = HashProxy::from(&passwords);
+/// let pw_filter: HashProxy<_, DefaultHasher, Xor8> = HashProxy::from(&passwords);
 ///
 /// for password in passwords {
 ///     assert!(pw_filter.contains(&password));
