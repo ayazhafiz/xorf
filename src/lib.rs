@@ -17,6 +17,8 @@
 //! performance statistics, refer to individual filters' documentation or the mentioned
 //! paper.
 //!
+//! Please see each filters' documentation for relevant usage information.
+//!
 //! [reduce disk writes]: https://en.wikipedia.org/wiki/Bloom_filter#Cache_filtering
 //! [identify malicious URLs]: https://en.wikipedia.org/wiki/Bloom_filter#Examples
 //! [`needs_allocator`]: https://doc.rust-lang.org/1.9.0/book/custom-allocators.html

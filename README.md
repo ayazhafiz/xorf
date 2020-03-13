@@ -1,7 +1,8 @@
 # xorf
 
-[![Build Status](https://travis-ci.com/ayazhafiz/xorf.svg?branch=master)](https://travis-ci.com/ayazhafiz/xorf)
+[![Xorf docs](https://docs.rs/xorf/badge.svg)](https://docs.rs/xorf)
 [![Crates.io](https://img.shields.io/crates/v/xorf)](https://crates.io/crates/xorf)
+[![Build Status](https://travis-ci.com/ayazhafiz/xorf.svg?branch=master)](https://travis-ci.com/ayazhafiz/xorf)
 
 - [Documentation](https://docs.rs/xorf)
 - [Crates.io Registry](https://crates.io/crates/xorf)
@@ -31,6 +32,9 @@ Currently, the following xor filters are provided:
 - [`Fuse8`](./src/fuse8.rs)
 - [`Fuse16`](./src/fuse16.rs)
 
+`xorf` also provides a [`HashProxy`](./src/hash_proxy.rs) for using Xor filters
+with arbitrary key types.
+
 ## Installation
 
 Add a dependency to `xorf` in `Cargo.toml`:
@@ -58,13 +62,8 @@ extern crate xorf;
 
 ## Usage
 
-```rust
-use xorf::{Filter, Xor8};
-```
-
-Xor filters operate on sets ofs 64-bit unsigned integers. The
-[library documentation](https://docs.rs/xorf) contains information about and
-examples of `xorf`'s filters and APIs.
+Please see the [library documentation](https://docs.rs/xorf) for usage
+information.
 
 ## Development
 
