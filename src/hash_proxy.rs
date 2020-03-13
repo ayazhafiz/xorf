@@ -175,15 +175,13 @@ mod test {
             .collect();
 
         macro_rules! drive_test {
-            ($xorf:ident) => {
-                {
-                    let keys = keys.clone();
-                    let filter: HashProxy<_, DefaultHasher, $xorf> = HashProxy::from(&keys);
-                    for key in keys {
-                        assert!(filter.contains(&key));
-                    }
+            ($xorf:ident) => {{
+                let keys = keys.clone();
+                let filter: HashProxy<_, DefaultHasher, $xorf> = HashProxy::from(&keys);
+                for key in keys {
+                    assert!(filter.contains(&key));
                 }
-            }
+            }};
         }
 
         drive_test!(Xor8);
