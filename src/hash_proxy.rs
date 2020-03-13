@@ -7,7 +7,7 @@ use core::hash::{Hash, Hasher};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Hashing proxy for Xor filters.
+/// Arbitrary key type proxy for Xor filters.
 ///
 /// A `HashProxy` exposes a [`Filter`] trait for arbitrary key types, using a `Filter<u64>` as
 /// an underlying keystore. The performance and collision rate of the `HashProxy` filter depends
@@ -29,15 +29,37 @@ use serde::{Deserialize, Serialize};
 ///     .map(|_| rng.sample_iter(&Alphanumeric).take(30).collect())
 ///     .collect();
 ///
-/// let pw_filter: HashProxy<_, DefaultHasher, Xor8> = HashProxy::from(&passwords);
+/// let pw_filter: HashProxy<String, DefaultHasher, Xor8> = HashProxy::from(&passwords);
 ///
 /// for password in passwords {
 ///     assert!(pw_filter.contains(&password));
 /// }
 /// ```
 ///
-/// A `HashProxy` persists type data about the underlying keystore. This means that the existence
-/// of a key can only be checked using types the `HashProxy` was created with.
+/// While a `HashProxy` persists type information about the keys it is constructed with, in most
+/// cases the key type parameter can be elided. For example, the `pw_filter` defined above can also
+/// be defined as
+///
+/// ```
+/// # extern crate alloc;
+/// # extern crate std;
+/// # use std::collections::hash_map::DefaultHasher;
+/// # use xorf::{Filter, HashProxy, Xor8};
+/// # use alloc::vec::Vec;
+/// # use rand::distributions::Alphanumeric;
+/// # use rand::Rng;
+/// #
+/// # const SAMPLE_SIZE: usize = 1_000_000;
+/// # let rng = rand::thread_rng();
+/// # let passwords: Vec<String> = (0..SAMPLE_SIZE)
+/// #     .map(|_| rng.sample_iter(&Alphanumeric).take(30).collect())
+/// #     .collect();
+/// #
+/// let pw_filter: HashProxy<_, DefaultHasher, Xor8> = HashProxy::from(&passwords);
+/// ```
+///
+/// Because of `HashProxy`s' key type parameter, the existence of a key can only be checked using
+/// types a `HashProxy` is constructed with.
 ///
 /// ```compile_fail
 /// # extern crate alloc;
@@ -145,23 +167,26 @@ mod test {
 
     #[test]
     fn test_initialization_from() {
-        macro_rules! test {
-            ($xorf:ident) => {{
-                const SAMPLE_SIZE: usize = 1_000_000;
-                let rng = rand::thread_rng();
-                let keys: Vec<String> = (0..SAMPLE_SIZE)
-                    .map(|_| rng.sample_iter(&Alphanumeric).take(30).collect())
-                    .collect();
+        const SAMPLE_SIZE: usize = 1_000_000;
+        let rng = rand::thread_rng();
+        // Key generation is expensive. Do it once and make copies during tests.
+        let keys: Vec<String> = (0..SAMPLE_SIZE)
+            .map(|_| rng.sample_iter(&Alphanumeric).take(15).collect())
+            .collect();
 
-                let filter: HashProxy<_, DefaultHasher, $xorf> = HashProxy::from(&keys);
-
-                for key in keys {
-                    assert!(filter.contains(&key));
+        macro_rules! drive_test {
+            ($xorf:ident) => {
+                {
+                    let keys = keys.clone();
+                    let filter: HashProxy<_, DefaultHasher, $xorf> = HashProxy::from(&keys);
+                    for key in keys {
+                        assert!(filter.contains(&key));
+                    }
                 }
-            }};
+            }
         }
 
-        test!(Xor8);
-        test!(Xor16);
+        drive_test!(Xor8);
+        drive_test!(Xor16);
     }
 }
