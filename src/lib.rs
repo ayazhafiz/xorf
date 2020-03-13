@@ -43,11 +43,13 @@ mod splitmix64;
 
 mod fuse16;
 mod fuse8;
+mod hash_proxy;
 mod xor16;
 mod xor8;
 
 pub use fuse16::Fuse16;
 pub use fuse8::Fuse8;
+pub use hash_proxy::HashProxy;
 pub use xor16::Xor16;
 pub use xor8::Xor8;
 

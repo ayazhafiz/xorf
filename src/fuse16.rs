@@ -90,6 +90,14 @@ impl TryFrom<&Vec<u64>> for Fuse16 {
     }
 }
 
+impl TryFrom<Vec<u64>> for Fuse16 {
+    type Error = &'static str;
+
+    fn try_from(v: Vec<u64>) -> Result<Self, Self::Error> {
+        Self::try_from(v.as_slice())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::{Filter, Fuse16};

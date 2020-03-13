@@ -78,6 +78,12 @@ impl From<&Vec<u64>> for Xor16 {
     }
 }
 
+impl From<Vec<u64>> for Xor16 {
+    fn from(v: Vec<u64>) -> Self {
+        Self::from(v.as_slice())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::{Filter, Xor16};
