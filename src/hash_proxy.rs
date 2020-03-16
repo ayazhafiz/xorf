@@ -1,4 +1,4 @@
-//! Implements a hashing proxy for Xor filters.
+//! Implements a hashing proxy for xor filters.
 
 use crate::Filter;
 use alloc::vec::Vec;
@@ -7,7 +7,7 @@ use core::hash::{Hash, Hasher};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Arbitrary key type proxy for Xor filters.
+/// Arbitrary key type proxy for xor filters.
 ///
 /// A `HashProxy` exposes a [`Filter`] trait for arbitrary key types, using a `Filter<u64>` as
 /// an underlying keystore. The performance and collision rate of the `HashProxy` filter depends
