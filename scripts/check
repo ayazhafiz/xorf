@@ -3,32 +3,29 @@
 #   check <action>
 #
 # Arguments:
-#   action    (lf|lintformat|test)
+#   action    $ACTIONS_LIST
+ACTIONS_LIST=("lintformat" "lf" "test")
 
 set -euo pipefail
 
-ACTION="$1"
-ACTIONS_LIST=("\`lintformat'" "\`lf'" "\`test'")
-ACTION_OPTIONS=$(echo "${ACTIONS_LIST[@]}" | sed "s/ /, /g")
-if [ -z "$ACTION" ]; then
-  echo "No action specified; must be one of $ACTION_OPTIONS"
-elif [ "$ACTION" = "lf" ]; then
-  ACTION="lintformat"
-elif [ "$ACTION" != "lintformat" ] && [ "$ACTION" != "test" ]; then
-  echo "Action must be one of \`lintformat'|\`lf', \`test'; found $ACTION"
-  exit 1
-fi
-
-case "$ACTION" in
-lintformat)
+do_lintformat() {
   set -x
-
   cargo clippy --all-targets --all-features
   cargo fmt --all -- --check
-  ;;
-test)
-  set -x
+}
 
+do_test() {
+  set -x
   cargo test
-  ;;
+}
+
+ACTION="${1:-''}"
+case "$ACTION" in
+lintformat) do_lintformat ;;
+lf)         do_lintformat ;;
+test)       do_test ;;
+*)
+  ACTIONS_OPTIONS=${ACTIONS_LIST[*]}
+  echo "Actions must be one of: ${ACTIONS_OPTIONS//[[:space:]]/, }"
+  exit 1
 esac
