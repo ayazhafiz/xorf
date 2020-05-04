@@ -1,0 +1,3 @@
+[submodule "scripts/_scripts"]
+	path = scripts/_scripts
+	url = https://github.com/ayazhafiz/scripts
