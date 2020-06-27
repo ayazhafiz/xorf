@@ -73,6 +73,7 @@ macro_rules! fuse_from_impl(
             use $crate::{
                 fingerprint,
                 make_block,
+                make_fp_block,
                 prelude::{
                     HashSet, HSet, KeyIndex,
                     fuse::{H012, FUSE_OVERHEAD, SLOTS},
@@ -154,16 +155,15 @@ macro_rules! fuse_from_impl(
 
             // Construct all fingerprints (see Algorithm 4 in the paper).
             #[allow(non_snake_case)]
-            let mut B: Box<[$fpty]> = make_block!(with capacity sets);
+            let mut B: Box<[$fpty]> = make_fp_block!(capacity);
             for ki in stack.iter().rev() {
                 let H012 { hset: [h0, h1, h2] } = H012::from(ki.hash, segment_length);
-                let mut fp = fingerprint!(ki.hash) as $fpty;
-                match ki.index {
-                    h if h == h0 => fp ^= B[h1] ^ B[h2],
-                    h if h == h1 => fp ^= B[h0] ^ B[h2],
-                    h if h == h2 => fp ^= B[h0] ^ B[h1],
+                let fp = (fingerprint!(ki.hash) as $fpty) ^ match ki.index {
+                    h if h == h0 => B[h1] ^ B[h2],
+                    h if h == h1 => B[h0] ^ B[h2],
+                    h if h == h2 => B[h0] ^ B[h1],
                     _ => unreachable!(),
-                }
+                };
                 B[ki.index] = fp;
             }
 

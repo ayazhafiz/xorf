@@ -1,0 +1,17 @@
+[package]
+name = "xorf-analysis"
+version = "0.0.0"
+authors = []
+publish = false
+edition = "2018"
+
+[[bin]]
+name = "zeroes"
+path = "src/zeroes.rs"
+
+[dependencies]
+rand = "0.7.3"
+
+[dependencies.xorf]
+path = ".."
+features = ["analysis"]

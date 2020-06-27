@@ -29,11 +29,13 @@ repository = "ayazhafiz/xorf"
 
 [dependencies]
 serde = { version = "1.0.104", optional = true, features = ["derive"] }
+num-traits = { version = "0.2.12", optional = true }
+rand = { version = "0.7.3", optional = true }
 
 [dev-dependencies]
 criterion = "0.3.0"
 criterion-macro = "0.3.0"
-rand = "0.7.2"
+rand = "0.7.3"
 
 [[bench]]
 name = "fuse16"
@@ -50,3 +52,8 @@ harness = false
 [[bench]]
 name = "xor8"
 harness = false
+
+[features]
+default = ["uniform-random"]
+uniform-random = ["rand"]
+analysis = ["num-traits"]

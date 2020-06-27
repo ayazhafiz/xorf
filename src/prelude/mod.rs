@@ -73,6 +73,36 @@ macro_rules! make_block(
     };
 );
 
+/// Creates a block to store output fingerprints.
+/// This is distinguished from `make_block`, as we may want to randomize the unused fingerprints
+/// rather than making them all 0.
+///
+/// ## Why?
+///
+/// Inevitably some fingerprint entries will not be used. If all of these unused entries are 0,
+/// then the false-positive rate for a element x where fingerprint(x) = 0 is significantly higher
+/// than if the unused entries are uniformly random
+///
+/// Of course, the tradeoff here is that generating random elements is more expensive than
+/// memsetting a bunch of zeroes, so the option is configurable with the `uniform-random` feature.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! make_fp_block(
+    ($size:ident) => {
+        if cfg!(feature = "uniform-random") {
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            let mut block = Vec::with_capacity($size);
+            for _ in 0..$size {
+                block.push(rng.gen());
+            }
+            block.into_boxed_slice()
+        } else {
+            make_block!(with $size sets)
+        }
+    }
+);
+
 /// Creates a block of sets, each set being of type T.
 #[doc(hidden)]
 #[macro_export]
