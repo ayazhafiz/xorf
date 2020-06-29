@@ -44,6 +44,16 @@ Add a dependency to `xorf` in `Cargo.toml`:
 xorf = "M.m.p" # use a desired version
 ```
 
+Available versions are listed on [crates](https://crates.io/crates/xorf) and the in [repository's
+releases](https://github.com/ayazhafiz/xorf/releases).
+
+## Usage
+
+Please see the [library documentation](https://docs.rs/xorf) for usage
+information.
+
+### Features
+
 To enable
 [`needs_allocator`](https://doc.rust-lang.org/1.9.0/book/custom-allocators.html)
 and serialization/deserialization, add the `nightly` and `serde` features,
@@ -54,16 +64,16 @@ respectively:
 xorf = { version = "M.m.p", features = ["nightly", "serde"] }
 ```
 
-Finally, add `xorf` as an external crate in the depender crate's root file:
+By default, `xorf` uses the `uniform-random` feature, which uses random values for unused
+fingerprint entries rather than setting them to zero. This provides a slightly lower false-positive
+rate, but incurs a higher initialization cost. The cost of lookups is not affected.
 
-```rust
-extern crate xorf;
+To disable the `uniform-random` feature, specify that default features should be disabled:
+
+```toml
+[dependencies]
+xorf = { version = "M.m.p", default-features = false }
 ```
-
-## Usage
-
-Please see the [library documentation](https://docs.rs/xorf) for usage
-information.
 
 ## Development
 

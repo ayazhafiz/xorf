@@ -72,6 +72,14 @@ impl Filter<u64> for Fuse16 {
     fn len(&self) -> usize {
         self.fingerprints.len()
     }
+
+    #[cfg(feature = "analysis")]
+    type N = u16;
+
+    #[cfg(feature = "analysis")]
+    fn fingerprints(&self) -> &[Self::N] {
+        &self.fingerprints
+    }
 }
 
 impl TryFrom<&[u64]> for Fuse16 {

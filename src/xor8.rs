@@ -64,6 +64,14 @@ impl Filter<u64> for Xor8 {
     fn len(&self) -> usize {
         self.fingerprints.len()
     }
+
+    #[cfg(feature = "analysis")]
+    type N = u8;
+
+    #[cfg(feature = "analysis")]
+    fn fingerprints(&self) -> &[Self::N] {
+        &self.fingerprints
+    }
 }
 
 impl From<&[u64]> for Xor8 {

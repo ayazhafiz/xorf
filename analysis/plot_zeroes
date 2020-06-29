@@ -1,0 +1,11 @@
+#!/bin/bash
+# Plots the distribution of zeroes in a filter.
+#
+# Usage:
+#     plot_zeroes <Xor8|Xor16|Fuse8|Fuse16>
+#
+# Dependencies:
+#     pip install matplotlib
+
+cargo run -q zeroes -- "$1" > zeroes.txt
+python plot_zeroes.py
