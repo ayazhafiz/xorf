@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 /// }
 ///
 /// // bits per entry
-/// let bpe = (filter.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
+/// let bpe = (filter.len() as f64) * 16.0 / (SAMPLE_SIZE as f64);
 /// assert!(bpe < 18.202, "Bits per entry is {}", bpe);
 ///
 /// // false positive rate
