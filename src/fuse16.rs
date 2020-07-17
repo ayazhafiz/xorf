@@ -7,7 +7,7 @@ use core::convert::TryFrom;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Xor filter using 8-bit fingerprints in a [fuse graph]. Requires less space than an [`Xor16`].
+/// Xor filter using 16-bit fingerprints in a [fuse graph]. Requires less space than an [`Xor16`].
 ///
 /// A `Fuse16` filter uses <18.202 bits per entry of the set is it constructed from, and has a false
 /// positive rate of <0.02%. As with other probabilistic filters, a higher number of entries decreases
