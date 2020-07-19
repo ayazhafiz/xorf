@@ -162,7 +162,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{xor16::Xor16, xor8::Xor8};
+    use crate::{xor16::Xor16, xor32::Xor32, xor8::Xor8};
     use crate::{Filter, HashProxy};
 
     use alloc::vec::Vec;
@@ -194,5 +194,6 @@ mod test {
 
         drive_test!(Xor8);
         drive_test!(Xor16);
+        drive_test!(Xor32);
     }
 }

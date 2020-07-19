@@ -47,6 +47,7 @@ mod fuse16;
 mod fuse8;
 mod hash_proxy;
 mod xor16;
+mod xor32;
 mod xor8;
 
 #[cfg(feature = "analysis")]
@@ -56,6 +57,7 @@ pub use fuse16::Fuse16;
 pub use fuse8::Fuse8;
 pub use hash_proxy::HashProxy;
 pub use xor16::Xor16;
+pub use xor32::Xor32;
 pub use xor8::Xor8;
 
 /// Methods common to xor filters.
