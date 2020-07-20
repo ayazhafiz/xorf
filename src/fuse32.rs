@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 /// Xor filter using 32-bit fingerprints in a [fuse graph]. Requires less space than an [`Xor32`].
 ///
 /// A `Fuse32` filter uses <36.404 bits per entry of the set is it constructed from, and has a false
-/// positive rate of <0.001%. As with other probabilistic filters, a higher number of entries decreases
+/// positive rate of effectively zero (1/2^32 =~ 1/4 billion). As with other probabilistic filters, a higher number of entries decreases
 /// the bits per entry but increases the false positive rate.
 ///
 /// A `Fuse32` filter uses less space and is faster to construct than an [`Xor32`] filter, but
@@ -53,7 +53,7 @@ use serde::{Deserialize, Serialize};
 /// Serializing and deserializing `Fuse32` filters can be enabled with the [`serde`] feature.
 ///
 /// [fuse graph]: https://arxiv.org/abs/1907.04749
-/// [`Xor16`]: crate::Xor16
+/// [`Xor32`]: crate::Xor32
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug)]
