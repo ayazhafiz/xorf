@@ -7,7 +7,7 @@ use core::convert::TryFrom;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Xor filter using 8-bit fingerprints in a [fuse graph]. Requires less space than an [`Xor16`].
+/// Xor filter using 16-bit fingerprints in a [fuse graph]. Requires less space than an [`Xor16`].
 ///
 /// A `Fuse16` filter uses <18.202 bits per entry of the set is it constructed from, and has a false
 /// positive rate of <0.02%. As with other probabilistic filters, a higher number of entries decreases
@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 /// }
 ///
 /// // bits per entry
-/// let bpe = (filter.len() as f64) * 8.0 / (SAMPLE_SIZE as f64);
+/// let bpe = (filter.len() as f64) * 16.0 / (SAMPLE_SIZE as f64);
 /// assert!(bpe < 18.202, "Bits per entry is {}", bpe);
 ///
 /// // false positive rate
