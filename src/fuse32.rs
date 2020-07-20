@@ -140,8 +140,9 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_false_positives() {
-        const SAMPLE_SIZE: usize = 1_000_000;
+        const SAMPLE_SIZE: usize = 1_000_000_000;
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
@@ -152,7 +153,7 @@ mod test {
             .filter(|n| filter.contains(n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-        assert!(fp_rate < 0.001, "False positive rate is {}", fp_rate);
+        assert!(fp_rate < 0.0000000000000001, "False positive rate is {}", fp_rate);
     }
 
     #[test]
