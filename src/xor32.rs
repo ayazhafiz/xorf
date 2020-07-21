@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 /// Xor filter using 32-bit fingerprints.
 ///
 /// An `Xor32` filter uses <40 bits per entry of the set is it constructed from, and has a false
-/// positive rate of <0.001%. As with other probabilistic filters, a higher number of entries decreases
-/// the bits per entry but increases the false positive rate.
+/// positive rate of effectively zero (1/2^32 =~ 1/4 billion). As with other probabilistic filters,
+/// a higher number of entries decreases the bits per entry but increases the false positive rate.
 ///
 /// An `Xor32` is constructed from a set of 64-bit unsigned integers and is immutable.
 ///
@@ -42,7 +42,7 @@ use serde::{Deserialize, Serialize};
 ///     .filter(|n| filter.contains(n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-/// assert!(fp_rate < 0.001, "False positive rate is {}", fp_rate);
+/// assert!(fp_rate < 0.0000000000000001, "False positive rate is {}", fp_rate);
 /// ```
 ///
 /// Serializing and deserializing `Xor32` filters can be enabled with the [`serde`] feature.
@@ -56,7 +56,7 @@ pub struct Xor32 {
 }
 
 impl Filter<u64> for Xor32 {
-    /// Returns `true` if the filter contains the specified key. Has a false positive rate of <0.02%.
+    /// Returns `true` if the filter contains the specified key.
     fn contains(&self, key: &u64) -> bool {
         xor_contains_impl!(*key, self, fingerprint u32)
     }
@@ -126,6 +126,13 @@ mod test {
 
     #[test]
     #[ignore]
+    // Note: takes a long time (> 1 hour) to run, and has a high memory
+    // requirement (> 32 GB), due to a 1bn sample size of crypto-random
+    // numbers being generated on a single thread.
+    // The test actually passes with a 10^-16 false positive rate
+    // which probably means the 1bn sample size is still too small.
+    // The expected false positive rate should be 1/2^32=~1/(4 billion),
+    // but has not been tested / verified.
     fn test_false_positives() {
         const SAMPLE_SIZE: usize = 1_000_000_000;
         let mut rng = rand::thread_rng();
@@ -138,6 +145,10 @@ mod test {
             .filter(|n| filter.contains(n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-        assert!(fp_rate < 0.0000000000000001, "False positive rate is {}", fp_rate);
+        assert!(
+            fp_rate < 0.0000000000000001,
+            "False positive rate is {}",
+            fp_rate
+        );
     }
 }
