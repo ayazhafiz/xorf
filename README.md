@@ -29,8 +29,10 @@ Currently, the following xor filters are provided:
 
 - [`Xor8`](./src/xor8.rs)
 - [`Xor16`](./src/xor16.rs)
+- [`Xor32`](./src/xor32.rs)
 - [`Fuse8`](./src/fuse8.rs)
 - [`Fuse16`](./src/fuse16.rs)
+- [`Fuse32`](./src/fuse32.rs)
 
 `xorf` also provides a [`HashProxy`](./src/hash_proxy.rs) for using Xor filters
 with arbitrary key types.

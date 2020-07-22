@@ -44,18 +44,22 @@ mod prelude;
 mod splitmix64;
 
 mod fuse16;
+mod fuse32;
 mod fuse8;
 mod hash_proxy;
 mod xor16;
+mod xor32;
 mod xor8;
 
 #[cfg(feature = "analysis")]
 use num_traits::Unsigned;
 
 pub use fuse16::Fuse16;
+pub use fuse32::Fuse32;
 pub use fuse8::Fuse8;
 pub use hash_proxy::HashProxy;
 pub use xor16::Xor16;
+pub use xor32::Xor32;
 pub use xor8::Xor8;
 
 /// Methods common to xor filters.
