@@ -1,7 +1,6 @@
 use crate::prelude::HashSet;
 
 impl HashSet {
-    #[inline]
     pub const fn xor_from(key: u64, block_length: usize, seed: u64) -> Self {
         let hash = crate::prelude::mix(key, seed);
 

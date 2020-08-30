@@ -7,7 +7,6 @@ pub const SLOTS: usize = SEGMENT_COUNT + ARITY - 1;
 pub const FUSE_OVERHEAD: f64 = 1.0 / 0.879;
 
 impl HashSet {
-    #[inline]
     pub const fn fuse_from(key: u64, segment_length: usize, seed: u64) -> Self {
         let hash = crate::prelude::mix(key, seed);
         let H012 { hset } = H012::from(hash, segment_length);
@@ -22,7 +21,6 @@ pub struct H012 {
 }
 
 impl H012 {
-    #[inline]
     pub const fn from(hash: u64, segment_length: usize) -> Self {
         use crate::{reduce, rotl64};
 
