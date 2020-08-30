@@ -10,11 +10,16 @@
 This repository hosts a Rust library implementing
 [xor filters](https://arxiv.org/abs/1912.08258) -- data structures for fast
 approximation of set membership using little memory. Probabilistic filters like
-xor filters are useful for quickly estimating of the existence of an entity to
-avoid using an expensive resource. For example, they can be used to
+xor filters are useful when it's okay to have false positives sometimes, but
+it's important to be space and time efficient. In other words, they trade off
+accuracy for efficiency as compared to general-purpose hashsets. Filters like
+xor filter are often used in conjunction with larger hash-based data structures,
+with the filter doing a "first pass" of the work to avoid using a more expensive
+resource unnecessarily. For example, filters like xor filters can be used to
 [reduce disk writes](https://en.wikipedia.org/wiki/Bloom_filter#Cache_filtering)
 in a cache or
-[identify malicious URLs](https://en.wikipedia.org/wiki/Bloom_filter#Examples).
+[identify malicious URLs](https://en.wikipedia.org/wiki/Bloom_filter#Examples)
+in a browser.
 
 Xor filters are faster and smaller than Bloom and Cuckoo filters. Xor filters
 incur a relative time penalty in construction, but are very fast in lookups; the
@@ -56,15 +61,31 @@ information.
 
 ### Features
 
-To enable
-[`needs_allocator`](https://doc.rust-lang.org/1.9.0/book/custom-allocators.html)
-and serialization/deserialization, add the `nightly` and `serde` features,
-respectively:
+#### Custom allocator
+
+To use a [custom global allocator](https://doc.rust-lang.org/1.9.0/book/custom-allocators.html),
+you must be using a nightly release of rustc and have enabled the `nightly`
+feature for `xorf`.
 
 ```toml
 [dependencies]
-xorf = { version = "M.m.p", features = ["nightly", "serde"] }
+xorf = { version = "M.m.p", features = ["nightly"] }
 ```
+
+This will tag the crate as `needs_allocator`, which you will then have to
+provide. At this time, a custom allocator is used globally.
+
+#### Serialization/Deserialization
+
+Serialization and deserialization with [serde](https://serde.rs/) cab be enabled
+with the `serde` feature.
+
+```toml
+[dependencies]
+xorf = { version = "M.m.p", features = ["serde"] }
+```
+
+#### Default features
 
 By default, `xorf` uses the `uniform-random` feature, which uses random values for unused
 fingerprint entries rather than setting them to zero. This provides a slightly lower false-positive
