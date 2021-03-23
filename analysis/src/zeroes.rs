@@ -19,7 +19,7 @@ macro_rules! print_zeroes {
             keys.push(key);
         }
         let filter = $filter::try_from(keys).unwrap();
-        let fp = filter.fingerprints();
+        let fp = filter.fingerprints;
         let window_size = 2000;
         let mut zeroes: usize = 0;
         for (i, t) in fp.iter().enumerate() {

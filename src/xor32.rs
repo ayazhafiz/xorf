@@ -50,9 +50,12 @@ use serde::{Deserialize, Serialize};
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Xor32 {
-    seed: u64,
-    block_length: usize,
-    fingerprints: Box<[u32]>,
+    /// The seed for the filter
+    pub seed: u64,
+    /// The number of blocks in the filter
+    pub block_length: usize,
+    /// The fingerprints for the filter
+    pub fingerprints: Box<[u32]>,
 }
 
 impl Filter<u64> for Xor32 {
@@ -63,14 +66,6 @@ impl Filter<u64> for Xor32 {
 
     fn len(&self) -> usize {
         self.fingerprints.len()
-    }
-
-    #[cfg(feature = "analysis")]
-    type N = u32;
-
-    #[cfg(feature = "analysis")]
-    fn fingerprints(&self) -> &[Self::N] {
-        &self.fingerprints
     }
 }
 

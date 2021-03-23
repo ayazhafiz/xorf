@@ -58,9 +58,12 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug)]
 pub struct Fuse16 {
-    seed: u64,
-    segment_length: usize,
-    fingerprints: Box<[u16]>,
+    /// The seed for the filter
+    pub seed: u64,
+    /// The number of blocks in the filter
+    pub segment_length: usize,
+    /// The fingerprints for the filter
+    pub fingerprints: Box<[u16]>,
 }
 
 impl Filter<u64> for Fuse16 {
@@ -71,14 +74,6 @@ impl Filter<u64> for Fuse16 {
 
     fn len(&self) -> usize {
         self.fingerprints.len()
-    }
-
-    #[cfg(feature = "analysis")]
-    type N = u16;
-
-    #[cfg(feature = "analysis")]
-    fn fingerprints(&self) -> &[Self::N] {
-        &self.fingerprints
     }
 }
 

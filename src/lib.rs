@@ -51,9 +51,6 @@ mod xor16;
 mod xor32;
 mod xor8;
 
-#[cfg(feature = "analysis")]
-use num_traits::Unsigned;
-
 pub use fuse16::Fuse16;
 pub use fuse32::Fuse32;
 pub use fuse8::Fuse8;
@@ -72,12 +69,4 @@ pub trait Filter<Type> {
 
     /// Returns the number of fingerprints in the filter.
     fn len(&self) -> usize;
-
-    /// Type of the fingerprints used in the filter.
-    #[cfg(feature = "analysis")]
-    type N: Unsigned;
-
-    /// Returns the list of fingerprints used by the filter.
-    #[cfg(feature = "analysis")]
-    fn fingerprints(&self) -> &[Self::N];
 }

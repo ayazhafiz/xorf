@@ -56,4 +56,3 @@ harness = false
 [features]
 default = ["uniform-random"]
 uniform-random = ["rand"]
-analysis = ["num-traits"]

@@ -117,14 +117,6 @@ where
     fn len(&self) -> usize {
         self.filter.len()
     }
-
-    #[cfg(feature = "analysis")]
-    type N = F::N;
-
-    #[cfg(feature = "analysis")]
-    fn fingerprints(&self) -> &[Self::N] {
-        self.filter.fingerprints()
-    }
 }
 
 impl<T, H, F> From<&[T]> for HashProxy<T, H, F>

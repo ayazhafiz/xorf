@@ -14,4 +14,3 @@ rand = "0.7.3"
 
 [dependencies.xorf]
 path = ".."
-features = ["analysis"]
