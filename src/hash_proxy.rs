@@ -24,9 +24,8 @@ use serde::{Deserialize, Serialize};
 /// # use rand::Rng;
 ///
 /// const SAMPLE_SIZE: usize = 1_000_000;
-/// let rng = rand::thread_rng();
 /// let passwords: Vec<String> = (0..SAMPLE_SIZE)
-///     .map(|_| rng.sample_iter(&Alphanumeric).take(30).collect())
+///     .map(|_| rand::thread_rng().sample_iter(&Alphanumeric).take(30).map(char::from).collect())
 ///     .collect();
 ///
 /// let pw_filter: HashProxy<String, DefaultHasher, Xor8> = HashProxy::from(&passwords);
@@ -50,9 +49,8 @@ use serde::{Deserialize, Serialize};
 /// # use rand::Rng;
 /// #
 /// # const SAMPLE_SIZE: usize = 1_000_000;
-/// # let rng = rand::thread_rng();
 /// # let passwords: Vec<String> = (0..SAMPLE_SIZE)
-/// #     .map(|_| rng.sample_iter(&Alphanumeric).take(30).collect())
+/// #     .map(|_| rand::thread_rng().sample_iter(&Alphanumeric).take(30).map(char::from).collect())
 /// #     .collect();
 /// #
 /// let pw_filter: HashProxy<_, DefaultHasher, Xor8> = HashProxy::from(&passwords);
@@ -168,10 +166,9 @@ mod test {
     #[test]
     fn test_initialization_from() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let rng = rand::thread_rng();
         // Key generation is expensive. Do it once and make copies during tests.
         let keys: Vec<String> = (0..SAMPLE_SIZE)
-            .map(|_| rng.sample_iter(&Alphanumeric).take(15).collect())
+            .map(|_| rand::thread_rng().sample_iter(&Alphanumeric).take(15).map(char::from).collect())
             .collect();
 
         macro_rules! drive_test {
