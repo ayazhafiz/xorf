@@ -71,6 +71,12 @@ jobs:
           command: clippy
           args: -- -D warnings
 
+      - name: Run tests (no default features)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features
+
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
