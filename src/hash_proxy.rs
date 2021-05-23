@@ -168,7 +168,13 @@ mod test {
         const SAMPLE_SIZE: usize = 1_000_000;
         // Key generation is expensive. Do it once and make copies during tests.
         let keys: Vec<String> = (0..SAMPLE_SIZE)
-            .map(|_| rand::thread_rng().sample_iter(&Alphanumeric).take(15).map(char::from).collect())
+            .map(|_| {
+                rand::thread_rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(15)
+                    .map(char::from)
+                    .collect()
+            })
             .collect();
 
         macro_rules! drive_test {
