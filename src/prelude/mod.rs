@@ -89,16 +89,20 @@ macro_rules! make_block(
 #[macro_export]
 macro_rules! make_fp_block(
     ($size:ident) => {
-        if cfg!(feature = "uniform-random") {
-            use rand::Rng;
-            let mut rng = rand::thread_rng();
-            let mut block = Vec::with_capacity($size);
-            for _ in 0..$size {
-                block.push(rng.gen());
+        {
+            #[cfg(feature = "uniform-random")] {
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+                let mut block = Vec::with_capacity($size);
+                for _ in 0..$size {
+                    block.push(rng.gen());
+                }
+                block.into_boxed_slice()
             }
-            block.into_boxed_slice()
-        } else {
-            make_block!(with $size sets)
+
+            #[cfg(not(feature = "uniform-random"))] {
+                make_block!(with $size sets)
+            }
         }
     }
 );
