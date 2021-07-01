@@ -134,4 +134,13 @@ mod test {
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
         assert!(fp_rate < 0.405, "False positive rate is {}", fp_rate);
     }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(
+        expected = "Xor filters must be constructed from a collection containing all distinct keys."
+    )]
+    fn test_debug_assert_duplicates() {
+        Xor8::from(vec![1, 2, 1]);
+    }
 }
