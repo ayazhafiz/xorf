@@ -48,7 +48,8 @@
 #![allow(
     clippy::len_without_is_empty,
     clippy::useless_attribute,
-    clippy::multiple_crate_versions
+    clippy::multiple_crate_versions,
+    clippy::fallible_impl_from
 )]
 
 #[macro_use]
