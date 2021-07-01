@@ -17,7 +17,22 @@
 //! performance statistics, refer to individual filters' documentation or the mentioned
 //! paper.
 //!
-//! Please see each filters' documentation for relevant usage information.
+//! ## General considerations for all filters
+//!
+//! For a given `N`, `XorN` filters are larger and less uniform than `FuseN` filters, but `XorN` are
+//! guaranteed to be constructable while `FuseN` filters require a large number of keys for
+//! construction to succeed. `N` refers to the bit size of a fingerprint (the
+//! result of a hash function) in the filter. Filters with larger fingerprints trade off
+//! lower false-positive rates for greater filter sizes.
+//!
+//! The false-positive rate of a filter with fingerprint size `N` is around `2^{-N}`; for more
+//! numbers, see the documentation of each individual filter.
+//!
+//! Below, we list important constraints to keep in mind regardless of the filter used:
+//!
+//! - It is a pre-condition that all filters are constructed from a data structure containing no
+//!   duplicate keys. You must perform any de-duplication needed yourself before constructing a
+//!   filter.
 //!
 //! [reduce disk writes]: https://en.wikipedia.org/wiki/Bloom_filter#Cache_filtering
 //! [identify malicious URLs]: https://en.wikipedia.org/wiki/Bloom_filter#Examples
