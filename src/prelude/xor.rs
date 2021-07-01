@@ -58,10 +58,12 @@ macro_rules! xor_from_impl(
                 fingerprint,
                 xor_h,
                 make_block,
-                prelude::{HashSet, HSet, KeyIndex},
+                prelude::{all_distinct, HashSet, HSet, KeyIndex},
                 splitmix64::splitmix64,
                 try_enqueue,
             };
+
+            debug_assert!(all_distinct($keys), "Xor filters must be constructed from a collection containing all distinct keys.");
 
             // See Algorithm 3 in the paper.
             let num_keys = $keys.len();

@@ -159,4 +159,13 @@ mod test {
         let filter = Fuse8::try_from(&keys);
         assert!(filter.expect_err("") == "Failed to construct fuse filter.");
     }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(
+        expected = "Fuse filters must be constructed from a collection containing all distinct keys."
+    )]
+    fn test_debug_assert_duplicates() {
+        let _ = Fuse8::try_from(vec![1, 2, 1]);
+    }
 }
