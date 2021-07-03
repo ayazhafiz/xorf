@@ -33,6 +33,49 @@ jobs:
           args: -- --check
 
   build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+          - nightly
+        features:
+          - "--all-features"
+          - "--no-default-features"
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Restore cargo cache
+        uses: actions/cache@v2.1.6
+        env:
+          cache-name: ci
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: ${{ matrix.os }}-${{ env.cache-name }}-${{ matrix.rust }}-${{ hashFiles('Cargo.lock') }}
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1.0.7
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - name: Build (debug)
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: {{ matrix.features }}
+      - name: Build (release)
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release {{ matrix.features }}
+
+  test:
     name: Lint and test check
     runs-on: ubuntu-latest
     strategy:
