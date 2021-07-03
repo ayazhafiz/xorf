@@ -68,12 +68,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: {{ matrix.features }}
+          args: ${{ matrix.features }}
       - name: Build (release)
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release {{ matrix.features }}
+          args: --release ${{ matrix.features }}
 
   test:
     name: Lint and test check
