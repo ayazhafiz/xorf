@@ -73,14 +73,17 @@ macro_rules! fuse_from_impl(
                 make_block,
                 make_fp_block,
                 prelude::{
-                    all_distinct, HashSet, HSet, KeyIndex,
+                    HashSet, HSet, KeyIndex,
                     fuse::{H012, FUSE_OVERHEAD, SLOTS},
                 },
                 splitmix64::splitmix64,
                 try_enqueue,
             };
 
-            debug_assert!(all_distinct($keys), "Fuse filters must be constructed from a collection containing all distinct keys.");
+            #[cfg(debug_assertions)] {
+                use $crate::prelude::all_distinct;
+                debug_assert!(all_distinct($keys), "Fuse filters must be constructed from a collection containing all distinct keys.");
+            }
 
             // See Algorithm 3 in the paper.
             let num_keys = $keys.len();
