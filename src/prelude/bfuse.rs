@@ -62,6 +62,7 @@ macro_rules! bfuse_from_impl(
             use $crate::{
                 fingerprint,
                 make_block,
+                make_fp_block,
                 prelude::{
                     mix,
                     bfuse::{segment_length, size_factor, hash_of_hash, mod3},
