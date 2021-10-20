@@ -1,5 +1,7 @@
 //! Common methods for xor filters.
 
+#[cfg(feature = "binary-fuse")]
+pub mod bfuse;
 pub mod fuse;
 pub mod xor;
 
@@ -30,7 +32,7 @@ pub struct HSet {
 /// Applies a finalization mix to a randomly-seeded key, resulting in an avalanched hash. This
 /// helps avoid high false-positive ratios (see Section 4 in the paper).
 #[inline]
-const fn mix(key: u64, seed: u64) -> u64 {
+pub const fn mix(key: u64, seed: u64) -> u64 {
     murmur3::mix64(key.overflowing_add(seed).0)
 }
 
