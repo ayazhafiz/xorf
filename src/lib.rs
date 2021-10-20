@@ -99,8 +99,11 @@ pub use bfuse16::BinaryFuse16;
 pub use bfuse32::BinaryFuse32;
 #[cfg(feature = "binary-fuse")]
 pub use bfuse8::BinaryFuse8;
+#[allow(deprecated)]
 pub use fuse16::Fuse16;
+#[allow(deprecated)]
 pub use fuse32::Fuse32;
+#[allow(deprecated)]
 pub use fuse8::Fuse8;
 pub use hash_proxy::HashProxy;
 pub use xor16::Xor16;

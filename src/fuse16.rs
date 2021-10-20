@@ -1,5 +1,7 @@
 //! Implements Fuse16 filters.
 
+#![allow(deprecated)] // Fuse16 filters are deprecated, but we need to implement them.
+
 use crate::{fuse_contains_impl, fuse_from_impl, Filter};
 use alloc::{boxed::Box, vec::Vec};
 use core::convert::TryFrom;
@@ -55,6 +57,7 @@ use serde::{Deserialize, Serialize};
 /// [fuse graph]: https://arxiv.org/abs/1907.04749
 /// [`Xor16`]: crate::Xor16
 /// [`serde`]: http://serde.rs
+#[deprecated(since = "0.8.0", note = "prefer using a `BinaryFuse16`")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug)]
 pub struct Fuse16 {
