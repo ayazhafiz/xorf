@@ -2,7 +2,7 @@
 
 [![Xorf docs](https://docs.rs/xorf/badge.svg)](https://docs.rs/xorf)
 [![Crates.io](https://img.shields.io/crates/v/xorf)](https://crates.io/crates/xorf)
-[![Build Status](https://travis-ci.com/ayazhafiz/xorf.svg?branch=master)](https://travis-ci.com/ayazhafiz/xorf)
+[![Build Status](https://github.com/ayazhafiz/xorf/actions/workflows/ci.yml/badge.svg)](https://github.com/ayazhafiz/xorf/actions/workflows/ci.yml)
 
 - [Documentation](https://docs.rs/xorf)
 - [Crates.io Registry](https://crates.io/crates/xorf)
