@@ -11,17 +11,11 @@ This repository hosts a Rust library implementing
 [xor filters](https://arxiv.org/abs/1912.08258) and their derivates:
 
 - Binary Fuse filters (most recommended)
-  - [`BinaryFuse8`](./src/bfuse8.rs)
-  - [`BinaryFuse16`](./src/bfuse16.rs)
-  - [`BinaryFuse32`](./src/bfuse32.rs)
+  - [`BinaryFuse8`](./src/bfuse8.rs), [`BinaryFuse16`](./src/bfuse16.rs), [`BinaryFuse32`](./src/bfuse32.rs)
 - Xor filters
-  - [`Xor8`](./src/xor8.rs)
-  - [`Xor16`](./src/xor16.rs)
-  - [`Xor32`](./src/xor32.rs)
+  - [`Xor8`](./src/xor8.rs), [`Xor16`](./src/xor16.rs), [`Xor32`](./src/xor32.rs)
 - Fuse filters (deprecated, use Binary Fuse filters instead)
-  - [`Fuse8`](./src/fuse8.rs)
-  - [`Fuse16`](./src/fuse16.rs)
-  - [`Fuse32`](./src/fuse32.rs)
+  - [`Fuse8`](./src/fuse8.rs), [`Fuse16`](./src/fuse16.rs), [`Fuse32`](./src/fuse32.rs)
 
 Xor filters are data structures for fast approximation of set membership using
 little memory. Probabilistic filters like
