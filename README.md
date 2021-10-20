@@ -32,12 +32,18 @@ This library is `no_std` and
 [`needs_allocator`](https://doc.rust-lang.org/1.9.0/book/custom-allocators.html).
 Currently, the following xor filters are provided:
 
-- [`Xor8`](./src/xor8.rs)
-- [`Xor16`](./src/xor16.rs)
-- [`Xor32`](./src/xor32.rs)
-- [`Fuse8`](./src/fuse8.rs)
-- [`Fuse16`](./src/fuse16.rs)
-- [`Fuse32`](./src/fuse32.rs)
+- Binary Fuse filters (most recommended)
+  - [`BinarFuse8`](./src/bfuse8.rs)
+  - [`BinarFuse16`](./src/bfuse16.rs)
+  - [`BinarFuse32`](./src/bfuse32.rs)
+- Xor filters
+  - [`Xor8`](./src/xor8.rs)
+  - [`Xor16`](./src/xor16.rs)
+  - [`Xor32`](./src/xor32.rs)
+- Fuse filters (deprecated, use Binary Fuse filters instead)
+  - [`Fuse8`](./src/fuse8.rs)
+  - [`Fuse16`](./src/fuse16.rs)
+  - [`Fuse32`](./src/fuse32.rs)
 
 `xorf` also provides a [`HashProxy`](./src/hash_proxy.rs) for using Xor filters
 with arbitrary key types.
@@ -87,6 +93,8 @@ xorf = { version = "M.m.p", features = ["serde"] }
 
 #### Default features
 
+##### Uniform Random
+
 By default, `xorf` uses the `uniform-random` feature, which uses random values for unused
 fingerprint entries rather than setting them to zero. This provides a slightly lower false-positive
 rate, but incurs a higher initialization cost. The cost of lookups is not affected.
@@ -97,6 +105,13 @@ To disable the `uniform-random` feature, specify that default features should be
 [dependencies]
 xorf = { version = "M.m.p", default-features = false }
 ```
+
+##### Binary Fuse
+
+By default, `xorf` uses the `binary-fuse` feature, which adds support for and
+exposes Binary Fuse filter implementations. This feature pulls in a dependency
+of `libm`, but has no runtime cost. This feature is highly recommended, as
+Binary Fuse filters are the most powerful in the Xor filter family.
 
 ## Development
 

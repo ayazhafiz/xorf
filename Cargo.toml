@@ -28,6 +28,7 @@ branch = "master"
 repository = "ayazhafiz/xorf"
 
 [dependencies]
+libm = { version = "0.2.1", optional = true }
 serde = { version = "1.0.104", optional = true, features = ["derive"] }
 num-traits = { version = "0.2.12", optional = true }
 rand = { version = "0.8", optional = true }
@@ -54,5 +55,6 @@ name = "xor8"
 harness = false
 
 [features]
-default = ["uniform-random"]
+default = ["uniform-random", "binary-fuse"]
 uniform-random = ["rand"]
+binary-fuse = ["libm"]
