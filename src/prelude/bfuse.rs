@@ -98,7 +98,7 @@ macro_rules! bfuse_from_impl(
             };
             let segment_count_length = segment_count * segment_length;
 
-            let mut fingerprints: Box<[$fpty]> = make_block!(with fp_array_len sets);
+            let mut fingerprints: Box<[$fpty]> = make_fp_block!(fp_array_len);
 
             let mut rng = 1;
             let mut seed = splitmix64(&mut rng);
