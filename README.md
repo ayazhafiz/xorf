@@ -8,8 +8,23 @@
 - [Crates.io Registry](https://crates.io/crates/xorf)
 
 This repository hosts a Rust library implementing
-[xor filters](https://arxiv.org/abs/1912.08258) -- data structures for fast
-approximation of set membership using little memory. Probabilistic filters like
+[xor filters](https://arxiv.org/abs/1912.08258) and their derivates:
+
+- Binary Fuse filters (most recommended)
+  - [`BinaryFuse8`](./src/bfuse8.rs)
+  - [`BinaryFuse16`](./src/bfuse16.rs)
+  - [`BinaryFuse32`](./src/bfuse32.rs)
+- Xor filters
+  - [`Xor8`](./src/xor8.rs)
+  - [`Xor16`](./src/xor16.rs)
+  - [`Xor32`](./src/xor32.rs)
+- Fuse filters (deprecated, use Binary Fuse filters instead)
+  - [`Fuse8`](./src/fuse8.rs)
+  - [`Fuse16`](./src/fuse16.rs)
+  - [`Fuse32`](./src/fuse32.rs)
+
+Xor filters are data structures for fast approximation of set membership using
+little memory. Probabilistic filters like
 xor filters are useful when it's okay to have false positives sometimes, but
 it's important to be space and time efficient. In other words, they trade off
 accuracy for efficiency as compared to general-purpose hashsets. Filters like
@@ -30,20 +45,6 @@ filter libraries.
 
 This library is `no_std` and
 [`needs_allocator`](https://doc.rust-lang.org/1.9.0/book/custom-allocators.html).
-Currently, the following xor filters are provided:
-
-- Binary Fuse filters (most recommended)
-  - [`BinarFuse8`](./src/bfuse8.rs)
-  - [`BinarFuse16`](./src/bfuse16.rs)
-  - [`BinarFuse32`](./src/bfuse32.rs)
-- Xor filters
-  - [`Xor8`](./src/xor8.rs)
-  - [`Xor16`](./src/xor16.rs)
-  - [`Xor32`](./src/xor32.rs)
-- Fuse filters (deprecated, use Binary Fuse filters instead)
-  - [`Fuse8`](./src/fuse8.rs)
-  - [`Fuse16`](./src/fuse16.rs)
-  - [`Fuse32`](./src/fuse32.rs)
 
 `xorf` also provides a [`HashProxy`](./src/hash_proxy.rs) for using Xor filters
 with arbitrary key types.
