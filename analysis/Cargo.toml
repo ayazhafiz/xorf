@@ -14,3 +14,5 @@ rand = "0.7.3"
 
 [dependencies.xorf]
 path = ".."
+# default-features = false
+# features = ["binary-fuse"]

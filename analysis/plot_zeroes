@@ -2,10 +2,20 @@
 # Plots the distribution of zeroes in a filter.
 #
 # Usage:
-#     plot_zeroes <Xor8|Xor16|Fuse8|Fuse16>
+#     plot_zeroes <BinaryFuse8|BinaryFuse16|Xor8|Xor16|Fuse8|Fuse16>
 #
 # Dependencies:
 #     pip install matplotlib
 
-cargo run -q zeroes -- "$1" > zeroes.txt
+case "$1" in
+  BinaryFuse8 | BinaryFuse16 | Xor8 | Xor16 | Fuse8 | Fuse16)
+    FILTER="$1"
+    ;;
+  *)
+    echo "Invalid filter $1"
+    exit 1
+    ;;
+esac
+
+cargo run -q zeroes --  "$FILTER" > zeroes.txt
 python plot_zeroes.py

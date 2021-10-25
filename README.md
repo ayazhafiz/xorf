@@ -91,8 +91,16 @@ xorf = { version = "M.m.p", features = ["serde"] }
 ##### Uniform Random
 
 By default, `xorf` uses the `uniform-random` feature, which uses random values for unused
-fingerprint entries rather than setting them to zero. This provides a slightly lower false-positive
+fingerprint entries rather than initializing them to zero. This provides a slightly lower false-positive
 rate, but incurs a higher initialization cost. The cost of lookups is not affected.
+
+The distribution of zero-valued fingerprints for a 1,000,000-element
+`BinaryFuse8` filter, both without and with the `uniform-random` feature, is
+visualized below. Notice that the scales of the y-axes differ.
+
+| `BinaryFuse8` without `uniform-random` | `BinaryFuse8` with `uniform-random` |
+|--|--|
+| ![Ouch](./analysis/uniformity/BinaryFuse8-no-uniform-random.png) | ![Nice](./analysis/uniformity/BinaryFuse8-uniform-random.png) |
 
 To disable the `uniform-random` feature, specify that default features should be disabled:
 

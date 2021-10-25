@@ -1,5 +1,7 @@
 // See analysis/plot_zeroes
 
+#![allow(deprecated)] // Fuse filters are deprecated
+
 extern crate core;
 extern crate rand;
 extern crate xorf;
@@ -8,7 +10,7 @@ use core::convert::TryFrom;
 use rand::Rng;
 use xorf::*;
 
-const SIZE: usize = 7_000_000;
+const SIZE: usize = 1_000_000;
 
 macro_rules! print_zeroes {
     ($filter:ident) => {{
@@ -43,8 +45,14 @@ fn main() {
         .expect("Expected filter argument");
 
     match filter_str.as_ref() {
-        "Fuse8" => print_zeroes!(Fuse8),
-        "Fuse16" => print_zeroes!(Fuse16),
+        "BinaryFuse8" => print_zeroes!(BinaryFuse8),
+        "BinaryFuse16" => print_zeroes!(BinaryFuse16),
+        "Fuse8" => {
+            print_zeroes!(Fuse8)
+        }
+        "Fuse16" => {
+            print_zeroes!(Fuse16)
+        }
         "Xor8" => print_zeroes!(Xor8),
         "Xor16" => print_zeroes!(Xor16),
         _ => panic!("Filter {} is invalid", filter_str),
