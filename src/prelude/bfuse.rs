@@ -59,6 +59,7 @@ pub const fn mod3(x: u8) -> u8 {
 macro_rules! bfuse_from_impl(
     ($keys:ident fingerprint $fpty:ty, max iter $max_iter:expr) => {
         {
+            use libm::round;
             use $crate::{
                 fingerprint,
                 make_block,
@@ -81,7 +82,7 @@ macro_rules! bfuse_from_impl(
             let segment_length_mask: u32 = segment_length - 1;
             let size_factor: f64 = size_factor(arity, size as u32);
             let capacity: u32 = if size > 1 {
-                (size as f64 * size_factor).round() as u32
+                round(size as f64 * size_factor) as u32
             } else { 0 };
             let init_segment_count = (capacity + segment_length - 1) / segment_length - (arity - 1);
             let (fp_array_len, segment_count) = {
