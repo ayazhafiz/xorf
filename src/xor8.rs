@@ -42,7 +42,7 @@ use serde::{Deserialize, Serialize};
 ///     .filter(|n| filter.contains(n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-/// assert!(fp_rate < 0.405, "False positive rate is {}", fp_rate);
+/// assert!(fp_rate < 0.406, "False positive rate is {}", fp_rate);
 /// ```
 ///
 /// Serializing and deserializing `Xor8` filters can be enabled with the [`serde`] feature.
@@ -132,7 +132,7 @@ mod test {
             .filter(|n| filter.contains(n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-        assert!(fp_rate < 0.405, "False positive rate is {}", fp_rate);
+        assert!(fp_rate < 0.406, "False positive rate is {}", fp_rate);
     }
 
     #[test]
