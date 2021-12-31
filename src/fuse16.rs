@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// Xor filter using 16-bit fingerprints in a [fuse graph]. Requires less space than an [`Xor16`].
 ///
 /// A `Fuse16` filter uses <18.202 bits per entry of the set is it constructed from, and has a false
-/// positive rate of <0.02%. As with other probabilistic filters, a higher number of entries decreases
+/// positive rate of <0.002%. As with other probabilistic filters, a higher number of entries decreases
 /// the bits per entry but increases the false positive rate.
 ///
 /// A `Fuse16` filter uses less space and is faster to construct than an [`Xor16`] filter, but
@@ -49,7 +49,7 @@ use serde::{Deserialize, Serialize};
 ///     .filter(|n| filter.contains(n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-/// assert!(fp_rate < 0.02, "False positive rate is {}", fp_rate);
+/// assert!(fp_rate < 0.0025, "False positive rate is {}", fp_rate);
 /// ```
 ///
 /// Serializing and deserializing `Fuse16` filters can be enabled with the [`serde`] feature.
@@ -70,7 +70,7 @@ pub struct Fuse16 {
 }
 
 impl Filter<u64> for Fuse16 {
-    /// Returns `true` if the filter contains the specified key. Has a false positive rate of <0.02%.
+    /// Returns `true` if the filter contains the specified key. Has a false positive rate of <0.002%.
     fn contains(&self, key: &u64) -> bool {
         fuse_contains_impl!(*key, self, fingerprint u16)
     }
@@ -150,7 +150,7 @@ mod test {
             .filter(|n| filter.contains(n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-        assert!(fp_rate < 0.02, "False positive rate is {}", fp_rate);
+        assert!(fp_rate < 0.0025, "False positive rate is {}", fp_rate);
     }
 
     #[test]
