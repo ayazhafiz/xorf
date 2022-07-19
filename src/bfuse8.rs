@@ -158,4 +158,11 @@ mod test {
     fn test_debug_assert_duplicates() {
         let _ = BinaryFuse8::try_from(vec![1, 2, 1]);
     }
+
+    #[test]
+    fn test_build_failure_with_subtraction_overflow() {
+        let key = rand::random();
+        let filter = BinaryFuse8::try_from(vec![key]).unwrap();
+        assert!(filter.contains(&key));
+    }
 }
