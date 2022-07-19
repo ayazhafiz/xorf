@@ -141,6 +141,6 @@ mod test {
         expected = "Xor filters must be constructed from a collection containing all distinct keys."
     )]
     fn test_debug_assert_duplicates() {
-        Xor8::from(vec![1, 2, 1]);
+        let _ = Xor8::from(vec![1, 2, 1]);
     }
 }
