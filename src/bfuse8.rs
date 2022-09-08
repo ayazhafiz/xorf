@@ -110,6 +110,16 @@ mod test {
     use rand::Rng;
 
     #[test]
+    fn test_zero_and_single() {
+        let keys = vec![];
+        let filter = BinaryFuse8::try_from(&keys).unwrap();
+
+        let keys = vec![1];
+        let filter = BinaryFuse8::try_from(&keys).unwrap();
+        // no panic
+    }
+
+    #[test]
     fn test_initialization() {
         const SAMPLE_SIZE: usize = 1_000_000;
         let mut rng = rand::thread_rng();
@@ -153,7 +163,7 @@ mod test {
     #[test]
     #[cfg(debug_assertions)]
     #[should_panic(
-        expected = "Binary Fuse filters must be constructed from a collection containing all distinct keys."
+    expected = "Binary Fuse filters must be constructed from a collection containing all distinct keys."
     )]
     fn test_debug_assert_duplicates() {
         let _ = BinaryFuse8::try_from(vec![1, 2, 1]);

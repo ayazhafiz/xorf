@@ -56,7 +56,7 @@ pub const fn mod3(x: u8) -> u8 {
 /// Implements `try_from(&[u64])` for an binary fuse filter of fingerprint type `$fpty`.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! bfuse_from_impl(
+macro_rules! bfuse_from_impl (
     ($keys:ident fingerprint $fpty:ty, max iter $max_iter:expr) => {
         {
             use libm::round;
@@ -84,9 +84,10 @@ macro_rules! bfuse_from_impl(
             let capacity: u32 = if size > 1 {
                 round(size as f64 * size_factor) as u32
             } else { 0 };
-            let init_segment_count = (capacity + segment_length - 1) / segment_length - (arity - 1);
+            // rust implementation is a fork from golang implementation https://github.com/FastFilter/xorfilter/blob/master/binaryfusefilter.go#L57
+            let init_segment_count = ((capacity + segment_length - 1) / segment_length).overflowing_sub(arity - 1).0;
             let (fp_array_len, segment_count) = {
-                let array_len = (init_segment_count + arity - 1) * segment_length;
+                let array_len = init_segment_count.overflowing_add(arity - 1).0 * segment_length;
                 let segment_count: u32 = {
                     let proposed = (array_len + segment_length - 1) / segment_length;
                     if proposed < arity {
@@ -278,7 +279,7 @@ macro_rules! bfuse_from_impl(
 /// Implements `contains(u64)` for a binary fuse filter of fingerprint type `$fpty`.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! bfuse_contains_impl(
+macro_rules! bfuse_contains_impl (
     ($key:expr, $self:expr, fingerprint $fpty:ty) => {
         {
             use $crate::{
