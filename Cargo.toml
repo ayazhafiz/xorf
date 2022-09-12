@@ -34,7 +34,7 @@ num-traits = { version = "0.2.12", optional = true }
 rand = { version = "0.8", optional = true }
 
 [dev-dependencies]
-criterion = "0.3.0"
+criterion = "0.4.0"
 criterion-macro = "0.3.0"
 rand = "0.8"
 
