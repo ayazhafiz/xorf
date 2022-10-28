@@ -73,7 +73,7 @@ macro_rules! bfuse_from_impl(
 
             #[cfg(debug_assertions)] {
                 use $crate::prelude::all_distinct;
-                debug_assert!(all_distinct($keys), "Binary Fuse filters must be constructed from a collection containing all distinct keys.");
+                debug_assert!(all_distinct($keys.clone()), "Binary Fuse filters must be constructed from a collection containing all distinct keys.");
             }
 
             let arity = 3u32;
@@ -130,8 +130,8 @@ macro_rules! bfuse_from_impl(
                 for i in 0..start_pos_len {
                     start_pos[i] = (((i as u64) * (size as u64)) >> block_bits) as usize;
                 }
-                for key in $keys.iter() {
-                    let hash = mix(*key, seed);
+                for key in $keys.clone() {
+                    let hash = mix(key, seed);
                     let mut segment_index = hash >> (64 - block_bits);
                     while reverse_order[start_pos[segment_index as usize] as usize] != 0 {
                         segment_index += 1;

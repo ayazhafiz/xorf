@@ -7,7 +7,7 @@ extern crate xorf;
 use core::convert::TryFrom;
 use criterion::{BenchmarkId, Criterion};
 use rand::Rng;
-use xorf::{Filter, BinaryFuse32};
+use xorf::{BinaryFuse32, Filter};
 
 const SAMPLE_SIZE: u32 = 500_000;
 

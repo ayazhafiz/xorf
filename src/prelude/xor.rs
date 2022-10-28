@@ -65,7 +65,7 @@ macro_rules! xor_from_impl(
 
             #[cfg(debug_assertions)] {
                 use $crate::prelude::all_distinct;
-                debug_assert!(all_distinct($keys), "Xor filters must be constructed from a collection containing all distinct keys.");
+                debug_assert!(all_distinct($keys.clone()), "Xor filters must be constructed from a collection containing all distinct keys.");
             }
 
             // See Algorithm 3 in the paper.
@@ -92,8 +92,8 @@ macro_rules! xor_from_impl(
             let mut seed = splitmix64(&mut rng);
             loop {
                 // Populate H by adding each key to its respective set.
-                for key in $keys.iter() {
-                    let HashSet { hash, hset } = HashSet::xor_from(*key, block_length, seed);
+                for key in $keys.clone() {
+                    let HashSet { hash, hset } = HashSet::xor_from(key, block_length, seed);
 
                     for b in 0..3 {
                         let setindex = hset[b];
