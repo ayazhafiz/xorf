@@ -76,7 +76,7 @@
 extern crate alloc;
 
 mod murmur3;
-mod prelude;
+pub mod prelude;
 mod splitmix64;
 
 #[cfg(feature = "binary-fuse")]
