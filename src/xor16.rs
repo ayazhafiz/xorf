@@ -8,6 +8,9 @@ use alloc::{boxed::Box, vec::Vec};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "bincode")]
+use bincode::{Encode, Decode};
+
 /// Xor filter using 16-bit fingerprints.
 ///
 /// An `Xor16` filter uses <20 bits per entry of the set is it constructed from, and has a false
@@ -45,10 +48,11 @@ use serde::{Deserialize, Serialize};
 /// assert!(fp_rate < 0.0025, "False positive rate is {}", fp_rate);
 /// ```
 ///
-/// Serializing and deserializing `Xor16` filters can be enabled with the [`serde`] feature.
+/// Serializing and deserializing `Xor16` filters can be enabled with the [`serde`] feature  (or [`bincode`] for bincode).
 ///
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 pub struct Xor16 {
     /// The seed for the filter
     pub seed: u64,
