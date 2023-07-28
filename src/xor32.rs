@@ -9,7 +9,7 @@ use alloc::{boxed::Box, vec::Vec};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "bincode")]
-use bincode::{Encode, Decode};
+use bincode::{Decode, Encode};
 
 /// Xor filter using 32-bit fingerprints.
 ///

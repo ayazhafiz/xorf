@@ -8,7 +8,7 @@ use core::hash::{Hash, Hasher};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "bincode")]
-use bincode::{Encode, Decode};
+use bincode::{Decode, Encode};
 
 /// Arbitrary key type proxy for xor filters.
 ///

@@ -10,7 +10,7 @@ use core::convert::TryFrom;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "bincode")]
-use bincode::{Encode, Decode};
+use bincode::{Decode, Encode};
 
 /// Xor filter using 8-bit fingerprints in a [fuse graph]. Requires less space than an [`Xor8`].
 ///

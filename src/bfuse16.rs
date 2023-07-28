@@ -8,7 +8,7 @@ use core::convert::TryFrom;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "bincode")]
-use bincode::{Encode, Decode};
+use bincode::{Decode, Encode};
 
 /// A `BinaryFuse16` filter is an Xor-like filter with 16-bit fingerprints arranged in a binary-partitioned [fuse graph].
 /// `BinaryFuse16`s are similar to [`Fuse16`]s, but their construction is faster, uses less
