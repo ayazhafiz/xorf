@@ -7,6 +7,9 @@ use core::convert::TryFrom;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "bincode")]
+use bincode::{Decode, Encode};
+
 /// A `BinaryFuse16` filter is an Xor-like filter with 16-bit fingerprints arranged in a binary-partitioned [fuse graph].
 /// `BinaryFuse16`s are similar to [`Fuse16`]s, but their construction is faster, uses less
 /// memory, and is more likely to succeed.
@@ -48,12 +51,13 @@ use serde::{Deserialize, Serialize};
 /// assert!(fp_rate < 0.0025, "False positive rate is {}", fp_rate);
 /// ```
 ///
-/// Serializing and deserializing `BinaryFuse16` filters can be enabled with the [`serde`] feature.
+/// Serializing and deserializing `BinaryFuse16` filters can be enabled with the [`serde`] feature (or [`bincode`] for bincode).
 ///
 /// [fuse graph]: https://arxiv.org/abs/1907.04749
 /// [`Fuse16`]: crate::Fuse16
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug)]
 pub struct BinaryFuse16 {
     seed: u64,

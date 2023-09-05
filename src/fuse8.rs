@@ -9,6 +9,9 @@ use core::convert::TryFrom;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "bincode")]
+use bincode::{Decode, Encode};
+
 /// Xor filter using 8-bit fingerprints in a [fuse graph]. Requires less space than an [`Xor8`].
 ///
 /// A `Fuse8` filter uses <9.101 bits per entry of the set is it constructed from, and has a false
@@ -52,13 +55,14 @@ use serde::{Deserialize, Serialize};
 /// assert!(fp_rate < 0.406, "False positive rate is {}", fp_rate);
 /// ```
 ///
-/// Serializing and deserializing `Fuse8` filters can be enabled with the [`serde`] feature.
+/// Serializing and deserializing `Fuse8` filters can be enabled with the [`serde`] feature (or [`bincode`] for bincode).
 ///
 /// [fuse graph]: https://arxiv.org/abs/1907.04749
 /// [`Xor8`]: crate::Xor8
 /// [`serde`]: http://serde.rs
 #[deprecated(since = "0.8.0", note = "prefer using a `BinaryFuse8`")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug)]
 pub struct Fuse8 {
     /// The seed for the filter

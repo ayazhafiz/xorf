@@ -7,6 +7,9 @@ use core::hash::{Hash, Hasher};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "bincode")]
+use bincode::{Decode, Encode};
+
 /// Arbitrary key type proxy for xor filters.
 ///
 /// A `HashProxy` exposes a [`Filter`] trait for arbitrary key types, using a `Filter<u64>` as
@@ -83,6 +86,7 @@ use serde::{Deserialize, Serialize};
 /// [`Hasher`]: core::hash::Hasher
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 pub struct HashProxy<T, H, F>
 where
     T: Hash,
