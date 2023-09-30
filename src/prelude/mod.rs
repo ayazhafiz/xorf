@@ -125,7 +125,7 @@ macro_rules! try_enqueue(
 
 /// Checks if a collection of keys has all distinct values.
 #[cfg(debug_assertions)]
-pub fn all_distinct<'a>(keys: impl IntoIterator<Item = &'a u64>) -> bool {
+pub fn all_distinct(keys: impl IntoIterator<Item = u64>) -> bool {
     let mut s = alloc::collections::BTreeSet::new();
     keys.into_iter().all(move |x| s.insert(x))
 }

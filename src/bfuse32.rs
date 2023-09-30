@@ -82,11 +82,26 @@ impl Filter<u64> for BinaryFuse32 {
     }
 }
 
+impl BinaryFuse32 {
+    /// Try to construct the filter from a key iterator. Can be used directly
+    /// if you don't have a contiguous array of u64 keys.
+    ///
+    /// Note: the iterator will be iterated over multiple times while building
+    /// the filter. If using a hash function to map the key, it may be cheaper
+    /// just to create a scratch array of hashed keys that you pass in.
+    pub fn try_from_iterator<T>(keys: T) -> Result<Self, &'static str>
+    where
+        T: ExactSizeIterator<Item = u64> + Clone,
+    {
+        bfuse_from_impl!(keys fingerprint u32, max iter 1_000)
+    }
+}
+
 impl TryFrom<&[u64]> for BinaryFuse32 {
     type Error = &'static str;
 
     fn try_from(keys: &[u64]) -> Result<Self, Self::Error> {
-        bfuse_from_impl!(keys fingerprint u32, max iter 1_000)
+        Self::try_from_iterator(keys.iter().copied())
     }
 }
 
@@ -94,7 +109,7 @@ impl TryFrom<&Vec<u64>> for BinaryFuse32 {
     type Error = &'static str;
 
     fn try_from(v: &Vec<u64>) -> Result<Self, Self::Error> {
-        Self::try_from(v.as_slice())
+        Self::try_from_iterator(v.iter().copied())
     }
 }
 
@@ -102,7 +117,7 @@ impl TryFrom<Vec<u64>> for BinaryFuse32 {
     type Error = &'static str;
 
     fn try_from(v: Vec<u64>) -> Result<Self, Self::Error> {
-        Self::try_from(v.as_slice())
+        Self::try_from_iterator(v.iter().copied())
     }
 }
 

@@ -73,21 +73,36 @@ impl Filter<u64> for Xor8 {
     }
 }
 
+impl Xor8 {
+    /// Construct the filter from a key iterator. Can be used directly
+    /// if you don't have a contiguous array of u64 keys.
+    ///
+    /// Note: the iterator will be iterated over multiple times while building
+    /// the filter. If using a hash function to map the key, it may be cheaper
+    /// just to create a scratch array of hashed keys that you pass in.
+    pub fn from_iterator<T>(keys: T) -> Self
+    where
+        T: ExactSizeIterator<Item = u64> + Clone,
+    {
+        xor_from_impl!(keys fingerprint u8)
+    }
+}
+
 impl From<&[u64]> for Xor8 {
     fn from(keys: &[u64]) -> Self {
-        xor_from_impl!(keys fingerprint u8)
+        Self::from_iterator(keys.iter().copied())
     }
 }
 
 impl From<&Vec<u64>> for Xor8 {
     fn from(v: &Vec<u64>) -> Self {
-        Self::from(v.as_slice())
+        Self::from_iterator(v.iter().copied())
     }
 }
 
 impl From<Vec<u64>> for Xor8 {
     fn from(v: Vec<u64>) -> Self {
-        Self::from(v.as_slice())
+        Self::from_iterator(v.iter().copied())
     }
 }
 

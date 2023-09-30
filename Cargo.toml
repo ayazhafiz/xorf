@@ -40,11 +40,31 @@ criterion-macro = "0.3.0"
 rand = "0.8"
 
 [[bench]]
+name = "bfuse32"
+harness = false
+
+[[bench]]
+name = "bfuse16"
+harness = false
+
+[[bench]]
+name = "bfuse8"
+harness = false
+
+[[bench]]
+name = "fuse32"
+harness = false
+
+[[bench]]
 name = "fuse16"
 harness = false
 
 [[bench]]
 name = "fuse8"
+harness = false
+
+[[bench]]
+name = "xor32"
 harness = false
 
 [[bench]]

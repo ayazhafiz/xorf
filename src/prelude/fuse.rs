@@ -82,7 +82,7 @@ macro_rules! fuse_from_impl(
 
             #[cfg(debug_assertions)] {
                 use $crate::prelude::all_distinct;
-                debug_assert!(all_distinct($keys), "Fuse filters must be constructed from a collection containing all distinct keys.");
+                debug_assert!(all_distinct($keys.clone()), "Fuse filters must be constructed from a collection containing all distinct keys.");
             }
 
             // See Algorithm 3 in the paper.
@@ -102,8 +102,8 @@ macro_rules! fuse_from_impl(
             let mut done = false;
             for _ in 0..$max_iter {
                 // Populate H by adding each key to its respective set.
-                for key in $keys.iter() {
-                    let HashSet { hash, hset } = HashSet::fuse_from(*key, segment_length, seed);
+                for key in $keys.clone() {
+                    let HashSet { hash, hset } = HashSet::fuse_from(key, segment_length, seed);
 
                     for b in 0..3 {
                         H[hset[b]].mask ^= hash;
