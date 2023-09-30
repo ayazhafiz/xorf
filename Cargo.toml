@@ -5,7 +5,7 @@ description = """
 Library implementing xor filters - faster and smaller than bloom and cuckoo filters.
 """
 documentation = "https://docs.rs/xorf"
-edition = "2018"
+edition = "2021"
 homepage = "https://github.com/ayazhafiz/xorf"
 keywords = ["xor", "filter", "hash", "hashing"]
 license = "MIT"
