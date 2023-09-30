@@ -5,7 +5,7 @@ description = """
 Library implementing xor filters - faster and smaller than bloom and cuckoo filters.
 """
 documentation = "https://docs.rs/xorf"
-edition = "2018"
+edition = "2021"
 homepage = "https://github.com/ayazhafiz/xorf"
 keywords = ["xor", "filter", "hash", "hashing"]
 license = "MIT"
@@ -30,7 +30,7 @@ repository = "ayazhafiz/xorf"
 [dependencies]
 libm = { version = "0.2.1", optional = true }
 serde = { version = "1.0.104", optional = true, features = ["derive"] }
-bincode = { version = "2.0.0-rc", default-features = false, optional = true, features = ["derive"]} 
+bincode = { version = "2.0.0-rc.3", default-features = false, optional = true, features = ["std", "derive"]} 
 num-traits = { version = "0.2.12", optional = true }
 rand = { version = "0.8", optional = true }
 
