@@ -58,7 +58,7 @@ use bincode::{Decode, Encode};
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "bincode", derive(Encode, Decode))]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BinaryFuse16 {
     seed: u64,
     segment_length: u32,

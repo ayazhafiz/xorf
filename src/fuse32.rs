@@ -63,7 +63,7 @@ use bincode::{Decode, Encode};
 #[deprecated(since = "0.8.0", note = "prefer using a `BinaryFuse32`")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "bincode", derive(Encode, Decode))]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Fuse32 {
     /// The seed for the filter
     pub seed: u64,

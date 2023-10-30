@@ -53,6 +53,7 @@ use bincode::{Decode, Encode};
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "bincode", derive(Encode, Decode))]
+#[derive(Debug, Clone)]
 pub struct Xor8 {
     /// The seed for the filter
     pub seed: u64,
