@@ -1,7 +1,15 @@
 //! Implements Binary Fuse filters.
 // Port of https://github.com/FastFilter/xorfilter/blob/master/binaryfusefilter.go
 
+use core::convert::TryInto;
+
 use libm::{floor, fmax, log};
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "bincode")]
+use bincode::{Decode, Encode};
 
 #[inline]
 pub fn segment_length(arity: u32, size: u32) -> u32 {
@@ -51,6 +59,38 @@ pub const fn mod3(x: u8) -> u8 {
     } else {
         x
     }
+}
+
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bincode", derive(Encode, Decode))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Descriptor {
+    pub seed: u64,
+    pub segment_length: u32,
+    pub segment_length_mask: u32,
+    pub segment_count_length: u32,
+}
+
+impl Descriptor {
+    pub const DMA_LEN: usize = u64::BITS as usize / 8 + (u32::BITS as usize / 8) * 3;
+}
+
+#[inline]
+pub fn parse_bfuse_descriptor(descriptor: &[u8]) -> Descriptor {
+    Descriptor {
+        seed: u64::from_le_bytes(descriptor[0..8].try_into().unwrap()),
+        segment_length: u32::from_le_bytes(descriptor[8..12].try_into().unwrap()),
+        segment_length_mask: u32::from_le_bytes(descriptor[12..16].try_into().unwrap()),
+        segment_count_length: u32::from_le_bytes(descriptor[16..20].try_into().unwrap()),
+    }
+}
+
+#[inline]
+pub fn serialize_bfuse_descriptor(descriptor: &Descriptor, out: &mut [u8]) {
+    out[0..8].copy_from_slice(&descriptor.seed.to_le_bytes());
+    out[8..12].copy_from_slice(&descriptor.segment_length.to_le_bytes());
+    out[12..16].copy_from_slice(&descriptor.segment_length_mask.to_le_bytes());
+    out[16..20].copy_from_slice(&descriptor.segment_count_length.to_le_bytes());
 }
 
 /// Implements `try_from(&[u64])` for an binary fuse filter of fingerprint type `$fpty`.
@@ -265,10 +305,10 @@ macro_rules! bfuse_from_impl(
             }
 
             Ok(Self {
-                seed,
+                descriptor: Descriptor{seed,
                 segment_length,
                 segment_length_mask,
-                segment_count_length,
+                segment_count_length,},
                 fingerprints,
             })
         }
@@ -288,9 +328,9 @@ macro_rules! bfuse_contains_impl(
                     bfuse::hash_of_hash
                 },
             };
-            let hash = mix($key, $self.seed);
+            let hash = mix($key, $self.descriptor.seed);
             let mut f = fingerprint!(hash) as $fpty;
-            let (h0, h1, h2) = hash_of_hash(hash, $self.segment_length, $self.segment_length_mask, $self.segment_count_length);
+            let (h0, h1, h2) = hash_of_hash(hash, $self.descriptor.segment_length, $self.descriptor.segment_length_mask, $self.descriptor.segment_count_length);
             f ^= $self.fingerprints[h0 as usize]
                ^ $self.fingerprints[h1 as usize]
                ^ $self.fingerprints[h2 as usize];

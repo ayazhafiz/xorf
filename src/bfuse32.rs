@@ -1,6 +1,10 @@
 //! Implements BinaryFuse16 filters.
 
-use crate::{bfuse_contains_impl, bfuse_from_impl, Filter};
+use crate::{
+    bfuse_contains_impl, bfuse_from_impl,
+    prelude::bfuse::{parse_bfuse_descriptor, serialize_bfuse_descriptor, Descriptor},
+    DmaSerializable, Filter, FilterRef,
+};
 use alloc::{boxed::Box, vec::Vec};
 use core::convert::TryFrom;
 
@@ -61,10 +65,8 @@ use bincode::{Decode, Encode};
 #[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug, Clone)]
 pub struct BinaryFuse32 {
-    seed: u64,
-    segment_length: u32,
-    segment_length_mask: u32,
-    segment_count_length: u32,
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    descriptor: Descriptor,
     /// The fingerprints for the filter
     pub fingerprints: Box<[u32]>,
 }
@@ -121,9 +123,73 @@ impl TryFrom<Vec<u64>> for BinaryFuse32 {
     }
 }
 
+impl DmaSerializable for BinaryFuse32 {
+    const DESCRIPTOR_LEN: usize = Descriptor::DMA_LEN;
+
+    fn dma_copy_descriptor_to(&self, out: &mut [u8]) {
+        serialize_bfuse_descriptor(&self.descriptor, out)
+    }
+
+    fn dma_fingerprints(&self) -> &[u8] {
+        let fingerprints = self.fingerprints.as_ref();
+        #[allow(clippy::manual_slice_size_calculation)]
+        let len = fingerprints.len() * core::mem::size_of::<u32>();
+        unsafe { core::slice::from_raw_parts(fingerprints.as_ptr() as *const u8, len) }
+    }
+}
+
+/// Like [`BinaryFuse32`] except that it can be constructed 0-copy from external buffers.
+#[derive(Debug, Clone)]
+pub struct BinaryFuse32Ref<'a> {
+    descriptor: Descriptor,
+    fingerprints: &'a [u32],
+}
+
+impl<'a> Filter<u64> for BinaryFuse32Ref<'a> {
+    /// Returns `true` if the filter contains the specified key.
+    /// Has a false positive rate of <0.4%.
+    /// Has no false negatives.
+    fn contains(&self, key: &u64) -> bool {
+        bfuse_contains_impl!(*key, self, fingerprint u32)
+    }
+
+    fn len(&self) -> usize {
+        self.fingerprints.len()
+    }
+}
+
+impl<'a> FilterRef<'a, u64> for BinaryFuse32Ref<'a> {
+    const FINGERPRINT_ALIGNMENT: usize = 4;
+
+    fn from_dma(descriptor: &[u8], fingerprints: &'a [u8]) -> Self {
+        assert_eq!(
+            fingerprints
+                .as_ptr()
+                .align_offset(core::mem::align_of::<u32>()),
+            0,
+            "Invalid fingerprint pointer provided - must be u32 aligned"
+        );
+        assert_eq!(
+            fingerprints.len() % core::mem::align_of::<u32>(),
+            0,
+            "Invalid fingerprint buffer provided - length must be a multiple of u32"
+        );
+
+        // #[allow(clippy::manual_slice_size_calculation)]
+        let len = fingerprints.len() / core::mem::size_of::<u32>();
+        let fingerprints =
+            unsafe { core::slice::from_raw_parts(fingerprints.as_ptr() as *const u32, len) };
+
+        Self {
+            descriptor: parse_bfuse_descriptor(descriptor),
+            fingerprints,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::{BinaryFuse32, Filter};
+    use crate::{bfuse32::BinaryFuse32Ref, BinaryFuse32, DmaSerializable, Filter, FilterRef};
     use core::convert::TryFrom;
 
     use alloc::vec::Vec;
@@ -181,5 +247,59 @@ mod test {
     )]
     fn test_debug_assert_duplicates() {
         let _ = BinaryFuse32::try_from(vec![1, 2, 1]);
+    }
+
+    #[test]
+    fn test_dma_roundtrip() {
+        const SAMPLE_SIZE: usize = 1_000_000;
+        let mut rng = rand::thread_rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+
+        let filter = BinaryFuse32::try_from(&keys).unwrap();
+
+        // Unaligned descriptor is fine.
+        let mut descriptor = [0; BinaryFuse32::DESCRIPTOR_LEN + 1];
+        filter.dma_copy_descriptor_to(&mut descriptor[1..]);
+
+        let filter_ref = BinaryFuse32Ref::from_dma(&descriptor[1..], filter.dma_fingerprints());
+        assert_eq!(filter_ref.descriptor, filter.descriptor);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid fingerprint pointer provided - must be u32 aligned")]
+    fn test_dma_unaligned_fingerprints() {
+        const SAMPLE_SIZE: usize = 1_000_000;
+        let mut rng = rand::thread_rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+
+        let filter = BinaryFuse32::try_from(&keys).unwrap();
+
+        let mut descriptor = [0; BinaryFuse32::DESCRIPTOR_LEN + 1];
+        filter.dma_copy_descriptor_to(&mut descriptor[1..]);
+
+        let mut as_vec = vec![1];
+        as_vec.extend_from_slice(filter.dma_fingerprints());
+
+        BinaryFuse32Ref::from_dma(&descriptor[1..], &as_vec[1..]);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Invalid fingerprint buffer provided - length must be a multiple of u32"
+    )]
+    fn test_dma_unaligned_fingerprints_len() {
+        const SAMPLE_SIZE: usize = 1_000_000;
+        let mut rng = rand::thread_rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+
+        let filter = BinaryFuse32::try_from(&keys).unwrap();
+
+        let mut descriptor = [0; BinaryFuse32::DESCRIPTOR_LEN + 1];
+        filter.dma_copy_descriptor_to(&mut descriptor[1..]);
+
+        let serialized = filter.dma_fingerprints();
+        let serialized = &serialized[..serialized.len() - 1];
+
+        BinaryFuse32Ref::from_dma(&descriptor[1..], serialized);
     }
 }
