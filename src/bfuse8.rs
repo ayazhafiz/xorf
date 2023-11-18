@@ -66,6 +66,7 @@ pub struct BinaryFuse8 {
     segment_length_mask: u32,
     segment_count_length: u32,
     /// The fingerprints for the filter
+    #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
     pub fingerprints: Box<[u8]>,
 }
 
