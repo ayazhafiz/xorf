@@ -112,8 +112,9 @@ where
     F: Filter<u64>,
 {
     /// Returns `true` if the underlying filter contains the specified key.
-    fn contains(&self, key: &T) -> bool {
-        self.filter.contains(&hash::<T, H>(key))
+    fn contains<Q: crate::Borrow<T>>(&self, key: &Q) -> bool
+    {
+        self.filter.contains(&hash::<T, H>(key.borrow()))
     }
 
     fn len(&self) -> usize {

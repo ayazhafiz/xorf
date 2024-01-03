@@ -27,7 +27,7 @@ use bincode::{Decode, Encode};
 ///
 /// # let mut rng = rand::thread_rng();
 /// const SAMPLE_SIZE: usize = 1_000_000;
-/// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+/// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen::<u64>()).collect();
 /// let filter = Xor32::from(&keys);
 ///
 /// // no false negatives
@@ -41,7 +41,7 @@ use bincode::{Decode, Encode};
 ///
 /// // false positive rate
 /// let false_positives: usize = (0..SAMPLE_SIZE)
-///     .map(|_| rng.gen())
+///     .map(|_| rng.gen::<u64>())
 ///     .filter(|n| filter.contains(n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
@@ -65,8 +65,8 @@ pub struct Xor32 {
 
 impl Filter<u64> for Xor32 {
     /// Returns `true` if the filter contains the specified key.
-    fn contains(&self, key: &u64) -> bool {
-        xor_contains_impl!(*key, self, fingerprint u32)
+    fn contains<Q: crate::Borrow<u64>>(&self, key: &Q) -> bool {
+        xor_contains_impl!(*key.borrow(), self, fingerprint u32)
     }
 
     fn len(&self) -> usize {
@@ -118,7 +118,7 @@ mod test {
     fn test_initialization() {
         const SAMPLE_SIZE: usize = 1_000_000;
         let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen::<u64>()).collect();
 
         let filter = Xor32::from(&keys);
 
@@ -131,7 +131,7 @@ mod test {
     fn test_bits_per_entry() {
         const SAMPLE_SIZE: usize = 1_000_000;
         let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen::<u64>()).collect();
 
         let filter = Xor32::from(&keys);
         let bpe = (filter.len() as f64) * 32.0 / (SAMPLE_SIZE as f64);
@@ -151,12 +151,12 @@ mod test {
     fn test_false_positives() {
         const SAMPLE_SIZE: usize = 1_000_000_000;
         let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen::<u64>()).collect();
 
         let filter = Xor32::from(&keys);
 
         let false_positives: usize = (0..SAMPLE_SIZE)
-            .map(|_| rng.gen())
+            .map(|_| rng.gen::<u64>())
             .filter(|n| filter.contains(n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
