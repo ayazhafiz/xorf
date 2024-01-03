@@ -109,6 +109,7 @@ pub use hash_proxy::HashProxy;
 pub use xor16::Xor16;
 pub use xor32::Xor32;
 pub use xor8::Xor8;
+use core::borrow::Borrow;
 
 /// Methods common to xor filters.
 pub trait Filter<Type> {
@@ -116,7 +117,8 @@ pub trait Filter<Type> {
     ///
     /// There can never be a false negative, but there is a small possibility of false positives.
     /// Refer to individual filters' documentation for false positive rates.
-    fn contains(&self, key: &Type) -> bool;
+    fn contains<Q: Borrow<Type>>(&self, key: &Q) -> bool;
+
 
     /// Returns the number of fingerprints in the filter.
     fn len(&self) -> usize;
