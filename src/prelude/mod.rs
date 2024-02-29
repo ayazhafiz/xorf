@@ -44,6 +44,7 @@ macro_rules! fingerprint(
         $hash ^ ($hash >> 32)
     };
 );
+pub use fingerprint;
 
 /// Rotate left
 #[doc(hidden)]

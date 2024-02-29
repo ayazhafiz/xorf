@@ -60,10 +60,12 @@ use bincode::{Decode, Encode};
 #[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug, Clone)]
 pub struct BinaryFuse16 {
-    seed: u64,
-    segment_length: u32,
-    segment_length_mask: u32,
-    segment_count_length: u32,
+    /// The seed for the filter
+    pub seed: u64,
+    /// The number of blocks in the filter
+    pub segment_length: u32,
+    pub segment_length_mask: u32,
+    pub segment_count_length: u32,
     /// The fingerprints for the filter
     pub fingerprints: Box<[u16]>,
 }
