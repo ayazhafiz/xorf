@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use bincode::{Decode, Encode};
 
 /// A `BinaryFuse32` filter is an Xor-like filter with 32-bit fingerprints arranged in a binary-partitioned [fuse graph].
+///
 /// `BinaryFuse32`s are similar to [`Fuse32`]s, but their construction is faster, uses less
 /// memory, and is more likely to succeed.
 ///

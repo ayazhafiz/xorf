@@ -61,15 +61,17 @@
 //! [go]: https://github.com/FastFilter/xorfilter
 //! [c]: https://github.com/FastFilter/xor_singleheader
 
+#![allow(unexpected_cfgs)]
 #![no_std]
 #![cfg_attr(feature = "nightly", feature(allocator_internals), needs_allocator)]
 #![warn(missing_docs)]
-#![forbid(clippy::all, clippy::cargo, clippy::nursery)]
+#![deny(clippy::all, clippy::cargo, clippy::nursery)]
 #![allow(
     clippy::len_without_is_empty,
     clippy::useless_attribute,
     clippy::multiple_crate_versions,
-    clippy::fallible_impl_from
+    clippy::fallible_impl_from,
+    clippy::manual_rotate
 )]
 
 #[macro_use]
@@ -135,6 +137,7 @@ pub trait FilterRef<'a, Type>: Filter<Type> {
 }
 
 /// DMA serializable filters are ones who can be essentially directly accessed into/out of DMA buffers.
+///
 /// This isn't a true 0-copy implementation and instead we make the following simplification.
 /// A DMA serializable filter has two components - the "fixed" descriptor and the variable length fingerprints.
 /// The fixed descriptor is small (a few words at most) and is copied into / out of the serialized form.
