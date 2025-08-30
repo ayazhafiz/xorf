@@ -70,6 +70,7 @@ pub struct Fuse8 {
     /// The number of blocks in the filter
     pub segment_length: usize,
     /// The fingerprints for the filter
+    #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
     pub fingerprints: Box<[u8]>,
 }
 

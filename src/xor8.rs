@@ -60,6 +60,7 @@ pub struct Xor8 {
     /// The number of blocks in the filter
     pub block_length: usize,
     /// The fingerprints for the filter
+    #[cfg_attr(feature = "serde", serde(with = "serde_bytes"))]
     pub fingerprints: Box<[u8]>,
 }
 
