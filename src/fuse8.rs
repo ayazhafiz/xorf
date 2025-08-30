@@ -20,7 +20,7 @@ use bincode::{Decode, Encode};
 ///
 /// A `Fuse8` filter uses less space and is faster to construct than an [`Xor8`] filter, but
 /// requires a large number of keys to be constructed. Experimentally, this number is somewhere
-/// >100_000. For smaller key sets, prefer the [`Xor8`] filter. A `Fuse8` filter may fail to be
+/// \>100_000. For smaller key sets, prefer the [`Xor8`] filter. A `Fuse8` filter may fail to be
 /// constructed.
 ///
 /// A `Fuse8` is constructed from a set of 64-bit unsigned integers and is immutable.

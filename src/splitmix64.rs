@@ -9,7 +9,7 @@
 /// distributed without any warranty.
 ///
 /// See <http://creativecommons.org/publicdomain/zero/1.0/>.
-pub fn splitmix64(seed: &mut u64) -> u64 {
+pub const fn splitmix64(seed: &mut u64) -> u64 {
     *seed = (*seed).overflowing_add(0x9e37_79b9_7f4a_7c15).0;
     let mut z = *seed;
     z = (z ^ (z >> 30)).overflowing_mul(0xbf58_476d_1ce4_e5b9).0;

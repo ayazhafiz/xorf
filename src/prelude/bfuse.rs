@@ -124,11 +124,11 @@ macro_rules! bfuse_from_impl(
             let capacity: u32 = if size > 1 {
                 round(size as f64 * size_factor) as u32
             } else { 0 };
-            let init_segment_count = (capacity + segment_length - 1) / segment_length;
+            let init_segment_count = capacity.div_ceil(segment_length);
             let (fp_array_len, segment_count) = {
                 let array_len = init_segment_count * segment_length;
                 let segment_count: u32 = {
-                    let proposed = (array_len + segment_length - 1) / segment_length;
+                    let proposed = array_len.div_ceil(segment_length);
                     if proposed < arity {
                         1
                     } else {
