@@ -94,11 +94,11 @@ mod xor32;
 mod xor8;
 
 #[cfg(feature = "binary-fuse")]
-pub use bfuse16::BinaryFuse16;
+pub use bfuse16::{BinaryFuse16, BinaryFuse16Ref};
 #[cfg(feature = "binary-fuse")]
-pub use bfuse32::BinaryFuse32;
+pub use bfuse32::{BinaryFuse32, BinaryFuse32Ref};
 #[cfg(feature = "binary-fuse")]
-pub use bfuse8::BinaryFuse8;
+pub use bfuse8::{BinaryFuse8, BinaryFuse8Ref};
 #[allow(deprecated)]
 pub use fuse16::Fuse16;
 #[allow(deprecated)]
@@ -120,4 +120,32 @@ pub trait Filter<Type> {
 
     /// Returns the number of fingerprints in the filter.
     fn len(&self) -> usize;
+}
+
+/// Equivalent to Filter except represents a reference to fingerprints stored elsewhere.
+pub trait FilterRef<'a, Type>: Filter<Type> {
+    /// The alignment required of the fingerprints slice.
+    const FINGERPRINT_ALIGNMENT: usize;
+
+    /// Create a filter from memory slices. These slices can be mmap from a file. The descriptor
+    /// is eagerly destructured while the fingerprints reference is retained. If the fingerprints
+    /// slice provided doesn't have an alignment of `FINGERPRINT_ALIGNMENT`, this function will
+    /// panic.
+    fn from_dma(descriptor: &[u8], fingerprints: &'a [u8]) -> Self;
+}
+
+/// DMA serializable filters are ones who can be essentially directly accessed into/out of DMA buffers.
+/// This isn't a true 0-copy implementation and instead we make the following simplification.
+/// A DMA serializable filter has two components - the "fixed" descriptor and the variable length fingerprints.
+/// The fixed descriptor is small (a few words at most) and is copied into / out of the serialized form.
+/// The variable length fingerprints however are referenced directly.
+pub trait DmaSerializable {
+    /// The serialized length of the descriptor. Very small and safe to allocate on-stack if needed.
+    const DESCRIPTOR_LEN: usize;
+
+    /// Copies the small fixed-length descriptor part of the filter to an output buffer.
+    fn dma_copy_descriptor_to(&self, out: &mut [u8]);
+
+    /// Obtains the raw byte slice of the fingerprints to serialize to disk.
+    fn dma_fingerprints(&self) -> &[u8];
 }

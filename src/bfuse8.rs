@@ -1,6 +1,10 @@
 //! Implements BinaryFuse8 filters.
 
-use crate::{bfuse_contains_impl, bfuse_from_impl, Filter};
+use crate::{
+    bfuse_contains_impl, bfuse_from_impl,
+    prelude::bfuse::{parse_bfuse_descriptor, serialize_bfuse_descriptor, Descriptor},
+    DmaSerializable, Filter, FilterRef,
+};
 use alloc::{boxed::Box, vec::Vec};
 use core::convert::TryFrom;
 
@@ -61,10 +65,8 @@ use bincode::{Decode, Encode};
 #[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug, Clone)]
 pub struct BinaryFuse8 {
-    seed: u64,
-    segment_length: u32,
-    segment_length_mask: u32,
-    segment_count_length: u32,
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    descriptor: Descriptor,
     /// The fingerprints for the filter
     pub fingerprints: Box<[u8]>,
 }
@@ -121,9 +123,52 @@ impl TryFrom<Vec<u64>> for BinaryFuse8 {
     }
 }
 
+impl DmaSerializable for BinaryFuse8 {
+    const DESCRIPTOR_LEN: usize = Descriptor::DMA_LEN;
+
+    fn dma_copy_descriptor_to(&self, out: &mut [u8]) {
+        serialize_bfuse_descriptor(&self.descriptor, out)
+    }
+
+    fn dma_fingerprints(&self) -> &[u8] {
+        self.fingerprints.as_ref()
+    }
+}
+
+/// Like [`BinaryFuse8`] except that it can be constructed 0-copy from external buffers.
+#[derive(Debug, Clone)]
+pub struct BinaryFuse8Ref<'a> {
+    descriptor: Descriptor,
+    fingerprints: &'a [u8],
+}
+
+impl<'a> Filter<u64> for BinaryFuse8Ref<'a> {
+    /// Returns `true` if the filter contains the specified key.
+    /// Has a false positive rate of <0.4%.
+    /// Has no false negatives.
+    fn contains(&self, key: &u64) -> bool {
+        bfuse_contains_impl!(*key, self, fingerprint u8)
+    }
+
+    fn len(&self) -> usize {
+        self.fingerprints.len()
+    }
+}
+
+impl<'a> FilterRef<'a, u64> for BinaryFuse8Ref<'a> {
+    const FINGERPRINT_ALIGNMENT: usize = 1;
+
+    fn from_dma(descriptor: &[u8], fingerprints: &'a [u8]) -> Self {
+        Self {
+            descriptor: parse_bfuse_descriptor(descriptor),
+            fingerprints,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::{BinaryFuse8, Filter};
+    use crate::{bfuse8::BinaryFuse8Ref, BinaryFuse8, DmaSerializable, Filter, FilterRef};
     use core::convert::TryFrom;
 
     use alloc::vec::Vec;
@@ -184,5 +229,21 @@ mod test {
         let key = rand::random();
         let filter = BinaryFuse8::try_from(vec![key]).unwrap();
         assert!(filter.contains(&key));
+    }
+
+    #[test]
+    fn test_dma_roundtrip() {
+        const SAMPLE_SIZE: usize = 1_000_000;
+        let mut rng = rand::thread_rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+
+        let filter = BinaryFuse8::try_from(&keys).unwrap();
+
+        // Unaligned descriptor is fine.
+        let mut descriptor = [0; BinaryFuse8::DESCRIPTOR_LEN + 1];
+        filter.dma_copy_descriptor_to(&mut descriptor[1..]);
+
+        let filter_ref = BinaryFuse8Ref::from_dma(&descriptor[1..], filter.dma_fingerprints());
+        assert_eq!(filter_ref.descriptor, filter.descriptor);
     }
 }
