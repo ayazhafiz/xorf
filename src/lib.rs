@@ -108,6 +108,8 @@ pub use fuse32::Fuse32;
 #[allow(deprecated)]
 pub use fuse8::Fuse8;
 pub use hash_proxy::HashProxy;
+#[cfg(feature = "binary-fuse")]
+pub use prelude::Descriptor;
 pub use xor16::Xor16;
 pub use xor32::Xor32;
 pub use xor8::Xor8;

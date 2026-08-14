@@ -7,6 +7,8 @@ pub mod xor;
 
 use crate::murmur3;
 
+pub use bfuse::Descriptor;
+
 /// A set of hashes indexing three blocks.
 pub struct HashSet {
     /// Key hash

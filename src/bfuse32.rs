@@ -66,8 +66,9 @@ use bincode::{Decode, Encode};
 #[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug, Clone)]
 pub struct BinaryFuse32 {
+    /// The descriptor which contains metadata about the filter
     #[cfg_attr(feature = "serde", serde(flatten))]
-    descriptor: Descriptor,
+    pub descriptor: Descriptor,
     /// The fingerprints for the filter
     pub fingerprints: Box<[u32]>,
 }

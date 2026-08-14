@@ -61,17 +61,23 @@ pub const fn mod3(x: u8) -> u8 {
     }
 }
 
+/// Descriptor for a binary fuse filter.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Descriptor {
+    /// The seed used for hashing keys into the filter.
     pub seed: u64,
+    /// The length of each segment in the filter.
     pub segment_length: u32,
+    /// A mask used for segment length calculations.
     pub segment_length_mask: u32,
+    /// The total length of all segments combined.
     pub segment_count_length: u32,
 }
 
 impl Descriptor {
+    /// Length of the descriptor when serialized with [`DmaSerializable`].
     pub const DMA_LEN: usize = u64::BITS as usize / 8 + (u32::BITS as usize / 8) * 3;
 }
 
