@@ -95,11 +95,9 @@ macro_rules! make_fp_block(
             #[cfg(feature = "uniform-random")] {
                 use rand::Rng;
                 let mut rng = rand::thread_rng();
-                let mut block = Vec::with_capacity($size);
-                for _ in 0..$size {
-                    block.push(rng.gen());
-                }
-                block.into_boxed_slice()
+                let mut block = vec![Default::default(); $size].into_boxed_slice();
+                rng.fill(&mut block[..]);
+                block
             }
 
             #[cfg(not(feature = "uniform-random"))] {
