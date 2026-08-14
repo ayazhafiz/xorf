@@ -2,7 +2,6 @@
 //!
 //! Run with: cargo test --test boundary_size_construction -- --nocapture
 
-use core::convert::TryFrom;
 use xorf::{BinaryFuse16, BinaryFuse32, BinaryFuse8, DmaSerializable, Filter};
 
 /// splitmix64, replicated from src/splitmix64.rs.
@@ -47,9 +46,8 @@ fn distinct_keys_at_boundary_size_construct() {
     assert_eq!(keys.len(), 11_515);
     assert_distinct(&keys);
 
-    let filter = BinaryFuse8::try_from(&keys).expect(
-        "11,515 distinct keys must construct via the segment-length fallback",
-    );
+    let filter = BinaryFuse8::try_from(&keys)
+        .expect("11,515 distinct keys must construct via the segment-length fallback");
     for key in &keys {
         assert!(filter.contains(key), "no false negatives");
     }
@@ -93,8 +91,7 @@ fn construction_succeeds_quickly_at_boundary_and_midband() {
         let mut rng = 0x0123_4567_89AB_CDEFu64;
         for _ in 0..sets {
             let keys: Vec<u64> = (0..n).map(|_| splitmix64(&mut rng)).collect();
-            let filter = BinaryFuse8::try_from(&keys)
-                .expect("synthetic set exhausted 1000 seeds");
+            let filter = BinaryFuse8::try_from(&keys).expect("synthetic set exhausted 1000 seeds");
             let failed = winning_iteration(&filter)
                 .expect("winning seed must be in the deterministic sequence");
             total_failed += failed;

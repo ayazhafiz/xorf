@@ -153,11 +153,14 @@ macro_rules! bfuse_from_impl(
             let mut reverse_order: Box<[u64]> = make_block!(with size_plus_1 sets);
             reverse_order[size] = 1;
 
+            // Same capacity, previous segment length every 4th try (xorfilter#50).
+            let try_smaller_segment = size > 4 && size < 1_000_000;
             let start_pos_cap = {
-                let mut max_segment_count = segment_count;
-                if size > 4 && size < 1_000_000 {
-                    max_segment_count = segment_count.saturating_mul(2).saturating_add(2);
-                }
+                let max_segment_count = if try_smaller_segment {
+                    segment_count.saturating_mul(2).saturating_add(2)
+                } else {
+                    segment_count
+                };
                 let mut block_bits = 1;
                 while (1 << block_bits) < max_segment_count {
                     block_bits += 1;
@@ -169,9 +172,8 @@ macro_rules! bfuse_from_impl(
             let mut done = false;
             let mut ultimate_size = 0;
             for iter in 0..$max_iter {
-                // Same capacity, previous segment length every 4th try (xorfilter#50).
                 let iteration = iter + 1;
-                if size > 4 && size < 1_000_000 {
+                if try_smaller_segment {
                     match iteration % 4 {
                         2 => {
                             segment_length /= 2;

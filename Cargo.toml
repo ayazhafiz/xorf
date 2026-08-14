@@ -83,3 +83,7 @@ default = ["uniform-random", "binary-fuse"]
 uniform-random = ["rand"]
 binary-fuse = ["libm"]
 serde = ["dep:serde", "serde_bytes"]
+
+[[test]]
+name = "boundary_size_construction"
+required-features = ["binary-fuse"]
