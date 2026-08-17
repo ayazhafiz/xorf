@@ -19,7 +19,7 @@ jobs:
           profile: minimal
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           prerelease: ${{ contains(github.ref, '-') }}
         env:
