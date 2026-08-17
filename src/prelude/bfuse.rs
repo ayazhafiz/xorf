@@ -153,7 +153,10 @@ macro_rules! bfuse_from_impl(
             let mut reverse_order: Box<[u64]> = make_block!(with size_plus_1 sets);
             reverse_order[size] = 1;
 
-            // Same capacity, previous segment length every 4th try (xorfilter#50).
+            // The empirical segment-length formula is too large just after a
+            // power-of-two step, so peeling rarely succeeds. Every fourth try
+            // keeps the same capacity and uses the previous (halved) length:
+            // https://github.com/FastFilter/xorfilter/pull/50
             let try_smaller_segment = size > 4 && size < 1_000_000;
             let start_pos_cap = {
                 let max_segment_count = if try_smaller_segment {
@@ -175,6 +178,7 @@ macro_rules! bfuse_from_impl(
                 let iteration = iter + 1;
                 if try_smaller_segment {
                     match iteration % 4 {
+                        // Same fingerprint array, recut into more, shorter segments.
                         2 => {
                             segment_length /= 2;
                             segment_length_mask = segment_length - 1;
@@ -182,6 +186,7 @@ macro_rules! bfuse_from_impl(
                             segment_count_length = segment_count * segment_length;
                         }
                         3 => {
+                            // Restore the formula layout.
                             segment_length *= 2;
                             segment_length_mask = segment_length - 1;
                             segment_count = segment_count / 2 - 1;

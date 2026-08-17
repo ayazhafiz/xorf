@@ -1,17 +1,6 @@
 //! Binary Fuse construction at a segment-length boundary (n = 11,515).
-//!
-//! Run with: cargo test --test boundary_size_construction -- --nocapture
 
-use xorf::{BinaryFuse16, BinaryFuse32, BinaryFuse8, DmaSerializable, Filter};
-
-/// splitmix64, replicated from src/splitmix64.rs.
-fn splitmix64(seed: &mut u64) -> u64 {
-    *seed = seed.wrapping_add(0x9E37_79B9_7F4A_7C15);
-    let mut z = *seed;
-    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-    z ^ (z >> 31)
-}
+use xorf::{splitmix64, BinaryFuse16, BinaryFuse32, BinaryFuse8, DmaSerializable, Filter};
 
 /// First 11,515 splitmix64 outputs from this state; fails every default-geometry seed.
 const FIXTURE_STATE: u64 = 28909;
