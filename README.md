@@ -37,8 +37,11 @@ Daniel Lemire's [go implementation](https://github.com/FastFilter/xorfilter)
 provides a useful summary of xor filters' benefits and listing of other xor
 filter libraries.
 
-This library is `no_std` and
-[`needs_allocator`](https://doc.rust-lang.org/1.9.0/book/custom-allocators.html).
+This library is `no_std` and uses [`alloc`](https://doc.rust-lang.org/alloc/).
+The final application supplies an allocator; no nightly-only crate feature is
+required. The default `uniform-random` feature uses the operating system's
+thread-local random number generator, so embedded targets should disable default
+features as shown below.
 
 `xorf` also provides a [`HashProxy`](./src/hash_proxy.rs) for using Xor filters
 with arbitrary key types.
@@ -49,11 +52,11 @@ Add a dependency to `xorf` in `Cargo.toml`:
 
 ```toml
 [dependencies]
-xorf = "M.m.p" # use a desired version
+xorf = "0.14"
 ```
 
-Available versions are listed on [crates](https://crates.io/crates/xorf) and the in [repository's
-releases](https://github.com/ayazhafiz/xorf/releases).
+Available versions are listed on [crates.io](https://crates.io/crates/xorf) and
+in the [repository's releases](https://github.com/ayazhafiz/xorf/releases).
 
 ## Usage
 
@@ -62,28 +65,30 @@ information.
 
 ### Features
 
-#### Custom allocator
+The supported user-facing features are:
 
-To use a [custom global allocator](https://doc.rust-lang.org/1.9.0/book/custom-allocators.html),
-you must be using a nightly release of rustc and have enabled the `nightly`
-feature for `xorf`.
+| Feature | Default | Effect |
+|---|---:|---|
+| `binary-fuse` | Yes | Exposes the recommended Binary Fuse implementations. |
+| `uniform-random` | Yes | Randomizes unused fingerprints to improve their distribution; requires a `std`-capable target. |
+| `serde` | No | Implements Serde serialization and deserialization. |
+| `bincode` | No | Legacy compatibility alias for `serde`; native bincode traits were removed in 0.14. |
+
+Serialization with [Serde](https://serde.rs/) can be enabled independently:
 
 ```toml
 [dependencies]
-xorf = { version = "M.m.p", features = ["nightly"] }
+xorf = { version = "0.14", features = ["serde"] }
 ```
 
-This will tag the crate as `needs_allocator`, which you will then have to
-provide. At this time, a custom allocator is used globally.
-
-#### Serialization/Deserialization
-
-Serialization and deserialization with [serde](https://serde.rs/) cab be enabled
-with the `serde` feature.
+The old `bincode` feature remains as an alias for `serde`, so existing
+manifests continue to resolve. Native bincode `Encode` and `Decode` impls were
+removed because bincode is unmaintained. Applications that still use bincode
+can serialize these types through bincode's Serde support while they migrate.
 
 ```toml
 [dependencies]
-xorf = { version = "M.m.p", features = ["serde"] }
+xorf = { version = "0.14", features = ["bincode"] }
 ```
 
 #### Default features
@@ -106,7 +111,14 @@ To disable the `uniform-random` feature, specify that default features should be
 
 ```toml
 [dependencies]
-xorf = { version = "M.m.p", default-features = false }
+xorf = { version = "0.14", default-features = false }
+```
+
+For a `no_std` target that has `alloc` and needs Binary Fuse filters:
+
+```toml
+[dependencies]
+xorf = { version = "0.14", default-features = false, features = ["binary-fuse"] }
 ```
 
 ##### Binary Fuse
@@ -116,15 +128,32 @@ exposes Binary Fuse filter implementations. This feature pulls in a dependency
 of `libm`, but has no runtime cost. This feature is highly recommended, as
 Binary Fuse filters are the most powerful in the Xor filter family.
 
+## Compatibility
+
+The minimum supported Rust version (MSRV) is 1.85. The CI suite builds the
+complete library API on that compiler and separately checks current stable,
+beta, nightly, and an embedded `no_std` target.
+
+Modernization releases preserve the existing public Rust API, Cargo feature
+names and defaults, and Serde and DMA representations. Version 0.14 removes
+native bincode traits while retaining `bincode` as a Serde-enabling migration
+alias. CI compares the public API with the latest crates.io release to catch
+accidental SemVer breaks. The DMA descriptor is little-endian; 16- and 32-bit
+fingerprint buffers remain native-endian and must meet the documented
+alignment requirements.
+
 ## Development
 
 Development of `xorf` targets the master branch of this repository.
 
-Changes can be tested by running the [`check`](./scripts/check) script:
+Run the same core checks used by CI with:
 
 ```bash
-scripts/check lf     # validates lint and format
-scripts/check test   # tests source code
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test -p xorf --all-features
+cargo test -p xorf --no-default-features
+cargo package -p xorf
 ```
 
 ## Contribution

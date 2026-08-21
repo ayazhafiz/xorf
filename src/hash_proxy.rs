@@ -7,9 +7,6 @@ use core::hash::{Hash, Hasher};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "bincode")]
-use bincode::{Decode, Encode};
-
 /// Arbitrary key type proxy for xor filters.
 ///
 /// A `HashProxy` exposes a [`Filter`] trait for arbitrary key types, using a `Filter<u64>` as
@@ -23,12 +20,12 @@ use bincode::{Decode, Encode};
 /// use std::collections::hash_map::DefaultHasher;
 /// use xorf::{Filter, HashProxy, Xor8};
 /// # use alloc::vec::Vec;
-/// # use rand::distributions::Alphanumeric;
-/// # use rand::Rng;
+/// # use rand::distr::Alphanumeric;
+/// # use rand::RngExt;
 ///
 /// const SAMPLE_SIZE: usize = 1_000_000;
 /// let passwords: Vec<String> = (0..SAMPLE_SIZE)
-///     .map(|_| rand::thread_rng().sample_iter(&Alphanumeric).take(30).map(char::from).collect())
+///     .map(|_| rand::rng().sample_iter(&Alphanumeric).take(30).map(char::from).collect())
 ///     .collect();
 ///
 /// let pw_filter: HashProxy<String, DefaultHasher, Xor8> = HashProxy::from(&passwords);
@@ -48,12 +45,12 @@ use bincode::{Decode, Encode};
 /// # use std::collections::hash_map::DefaultHasher;
 /// # use xorf::{Filter, HashProxy, Xor8};
 /// # use alloc::vec::Vec;
-/// # use rand::distributions::Alphanumeric;
-/// # use rand::Rng;
+/// # use rand::distr::Alphanumeric;
+/// # use rand::RngExt;
 /// #
 /// # const SAMPLE_SIZE: usize = 1_000_000;
 /// # let passwords: Vec<String> = (0..SAMPLE_SIZE)
-/// #     .map(|_| rand::thread_rng().sample_iter(&Alphanumeric).take(30).map(char::from).collect())
+/// #     .map(|_| rand::rng().sample_iter(&Alphanumeric).take(30).map(char::from).collect())
 /// #     .collect();
 /// #
 /// let pw_filter: HashProxy<_, DefaultHasher, Xor8> = HashProxy::from(&passwords);
@@ -86,7 +83,6 @@ use bincode::{Decode, Encode};
 /// [`Hasher`]: core::hash::Hasher
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 pub struct HashProxy<T, H, F>
 where
     T: Hash,
@@ -156,12 +152,12 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{xor16::Xor16, xor32::Xor32, xor8::Xor8};
     use crate::{Filter, HashProxy};
+    use crate::{xor8::Xor8, xor16::Xor16, xor32::Xor32};
 
     use alloc::vec::Vec;
-    use rand::distributions::Alphanumeric;
-    use rand::Rng;
+    use rand::RngExt;
+    use rand::distr::Alphanumeric;
 
     extern crate std;
     use std::collections::hash_map::DefaultHasher;
@@ -173,7 +169,7 @@ mod test {
         // Key generation is expensive. Do it once and make copies during tests.
         let keys: Vec<String> = (0..SAMPLE_SIZE)
             .map(|_| {
-                rand::thread_rng()
+                rand::rng()
                     .sample_iter(&Alphanumeric)
                     .take(15)
                     .map(char::from)

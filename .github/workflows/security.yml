@@ -1,0 +1,39 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - analysis/Cargo.toml
+      - .github/workflows/security.yml
+  pull_request:
+    branches: [master]
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - analysis/Cargo.toml
+      - .github/workflows/security.yml
+  schedule:
+    - cron: "17 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Audit dependencies
+        run: cargo audit

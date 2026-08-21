@@ -1,22 +1,20 @@
-#[macro_use]
-extern crate criterion;
-extern crate core;
-extern crate rand;
-extern crate xorf;
+//! Benchmarks for deprecated `Fuse8` construction and lookups.
+
+#![allow(deprecated)]
 
 use core::convert::TryFrom;
-use criterion::{BenchmarkId, Criterion};
-use rand::Rng;
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
+use rand::RngExt;
 use xorf::{Filter, Fuse8};
 
 const SAMPLE_SIZE: u32 = 500_000;
 
 fn from(c: &mut Criterion) {
     let mut group = c.benchmark_group("Fuse8");
-    let group = group.sample_size(10);
+    group.sample_size(10);
 
-    let mut rng = rand::thread_rng();
-    let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+    let mut rng = rand::rng();
+    let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
     group.bench_with_input(BenchmarkId::new("from", SAMPLE_SIZE), &keys, |b, keys| {
         b.iter(|| Fuse8::try_from(keys).unwrap());
@@ -26,12 +24,12 @@ fn from(c: &mut Criterion) {
 fn contains(c: &mut Criterion) {
     let mut group = c.benchmark_group("Fuse8");
 
-    let mut rng = rand::thread_rng();
-    let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+    let mut rng = rand::rng();
+    let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
     let filter = Fuse8::try_from(&keys).unwrap();
 
     group.bench_function(BenchmarkId::new("contains", SAMPLE_SIZE), |b| {
-        let key = rng.gen();
+        let key = rng.random();
         b.iter(|| filter.contains(&key));
     });
 }

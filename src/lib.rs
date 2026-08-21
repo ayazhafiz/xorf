@@ -9,7 +9,18 @@
 //!
 //! Xor filters operate only on sets of 64-bit (unsigned) integers. This library does not provide
 //! methods for hashing arbitrary types to 64-bit integers. Xor filters are immutable,
-//! serializable, and guarantee no false negatives. This library is `no_std` and [`needs_allocator`].
+//! serializable, and guarantee no false negatives. This library is `no_std` and uses [`alloc`].
+//!
+//! ## Crate features
+//!
+//! - `binary-fuse` (default) exposes the recommended Binary Fuse filters.
+//! - `uniform-random` (default) randomizes unused fingerprints and requires a `std`-capable
+//!   target through `rand`.
+//! - `serde` implements Serde serialization and deserialization.
+//! - `bincode` is a legacy compatibility alias for `serde`.
+//!
+//! For a `no_std` target, disable default features and opt back into `binary-fuse` if needed.
+//! The minimum supported Rust version is 1.85.
 //!
 //! Filters are implemented as described in the paper
 //! "[Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters]", in the upcoming
@@ -56,23 +67,11 @@
 //! [fuse graph]: https://arxiv.org/abs/1907.04749
 //! [reduce disk writes]: https://en.wikipedia.org/wiki/Bloom_filter#Cache_filtering
 //! [identify malicious URLs]: https://en.wikipedia.org/wiki/Bloom_filter#Examples
-//! [`needs_allocator`]: https://doc.rust-lang.org/1.9.0/book/custom-allocators.html
 //! [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters]: https://arxiv.org/abs/1912.08258
 //! [go]: https://github.com/FastFilter/xorfilter
 //! [c]: https://github.com/FastFilter/xor_singleheader
 
-#![allow(unexpected_cfgs)]
 #![no_std]
-#![cfg_attr(feature = "nightly", feature(allocator_internals), needs_allocator)]
-#![warn(missing_docs)]
-#![deny(clippy::all, clippy::cargo, clippy::nursery)]
-#![allow(
-    clippy::len_without_is_empty,
-    clippy::useless_attribute,
-    clippy::multiple_crate_versions,
-    clippy::fallible_impl_from,
-    clippy::manual_rotate
-)]
 
 #[macro_use]
 extern crate alloc;
@@ -98,23 +97,23 @@ mod xor32;
 mod xor8;
 
 #[cfg(feature = "binary-fuse")]
+pub use bfuse8::{BinaryFuse8, BinaryFuse8Ref};
+#[cfg(feature = "binary-fuse")]
 pub use bfuse16::{BinaryFuse16, BinaryFuse16Ref};
 #[cfg(feature = "binary-fuse")]
 pub use bfuse32::{BinaryFuse32, BinaryFuse32Ref};
-#[cfg(feature = "binary-fuse")]
-pub use bfuse8::{BinaryFuse8, BinaryFuse8Ref};
+#[allow(deprecated)]
+pub use fuse8::Fuse8;
 #[allow(deprecated)]
 pub use fuse16::Fuse16;
 #[allow(deprecated)]
 pub use fuse32::Fuse32;
-#[allow(deprecated)]
-pub use fuse8::Fuse8;
 pub use hash_proxy::HashProxy;
 #[cfg(feature = "binary-fuse")]
 pub use prelude::Descriptor;
+pub use xor8::Xor8;
 pub use xor16::Xor16;
 pub use xor32::Xor32;
-pub use xor8::Xor8;
 
 /// Methods common to xor filters.
 pub trait Filter<Type> {

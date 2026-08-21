@@ -1,6 +1,6 @@
 //! Binary Fuse construction at a segment-length boundary (n = 11,515).
 
-use xorf::{splitmix64, BinaryFuse16, BinaryFuse32, BinaryFuse8, DmaSerializable, Filter};
+use xorf::{BinaryFuse8, BinaryFuse16, BinaryFuse32, DmaSerializable, Filter, splitmix64};
 
 /// First 11,515 splitmix64 outputs from this state; fails every default-geometry seed.
 const FIXTURE_STATE: u64 = 28909;

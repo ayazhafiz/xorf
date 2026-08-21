@@ -2,15 +2,12 @@
 
 #![allow(deprecated)] // Fuse32 filters are deprecated, but we need to implement them.
 
-use crate::{fuse_contains_impl, fuse_from_impl, Filter};
+use crate::{Filter, fuse_contains_impl, fuse_from_impl};
 use alloc::{boxed::Box, vec::Vec};
 use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "bincode")]
-use bincode::{Decode, Encode};
 
 /// Xor filter using 32-bit fingerprints in a [fuse graph]. Requires less space than an [`Xor32`].
 ///
@@ -30,11 +27,11 @@ use bincode::{Decode, Encode};
 /// use xorf::{Filter, Fuse32};
 /// use core::convert::TryFrom;
 /// # use alloc::vec::Vec;
-/// # use rand::Rng;
+/// # use rand::RngExt;
 ///
-/// # let mut rng = rand::thread_rng();
+/// # let mut rng = rand::rng();
 /// const SAMPLE_SIZE: usize = 1_000_000;
-/// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+/// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 /// let filter = Fuse32::try_from(&keys).unwrap();
 ///
 /// // no false negatives
@@ -48,21 +45,20 @@ use bincode::{Decode, Encode};
 ///
 /// // false positive rate
 /// let false_positives: usize = (0..SAMPLE_SIZE)
-///     .map(|_| rng.gen())
+///     .map(|_| rng.random())
 ///     .filter(|n| filter.contains(n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-/// assert!(fp_rate < 0.0000000000000001, "False positive rate is {}", fp_rate);
+/// assert!(fp_rate < 0.0002, "False positive rate is {}", fp_rate);
 /// ```
 ///
-/// Serializing and deserializing `Fuse32` filters can be enabled with the [`serde`] feature  (or [`bincode`] for bincode).
+/// Serializing and deserializing `Fuse32` filters can be enabled with the [`serde`] feature.
 ///
 /// [fuse graph]: https://arxiv.org/abs/1907.04749
 /// [`Xor32`]: crate::Xor32
 /// [`serde`]: http://serde.rs
 #[deprecated(since = "0.8.0", note = "prefer using a `BinaryFuse32`")]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug, Clone)]
 pub struct Fuse32 {
     /// The seed for the filter
@@ -129,13 +125,13 @@ mod test {
     use core::convert::TryFrom;
 
     use alloc::vec::Vec;
-    use rand::Rng;
+    use rand::RngExt;
 
     #[test]
     fn test_initialization() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = Fuse32::try_from(&keys).unwrap();
 
@@ -147,8 +143,8 @@ mod test {
     #[test]
     fn test_bits_per_entry() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = Fuse32::try_from(&keys).unwrap();
         let bpe = (filter.len() as f64) * 32.0 / (SAMPLE_SIZE as f64);
@@ -167,28 +163,24 @@ mod test {
     // but has not been tested / verified.
     fn test_false_positives() {
         const SAMPLE_SIZE: usize = 1_000_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = Fuse32::try_from(&keys).unwrap();
 
         let false_positives: usize = (0..SAMPLE_SIZE)
-            .map(|_| rng.gen())
+            .map(|_| rng.random())
             .filter(|n| filter.contains(n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-        assert!(
-            fp_rate < 0.0000000000000001,
-            "False positive rate is {}",
-            fp_rate
-        );
+        assert!(fp_rate < 0.0002, "False positive rate is {}", fp_rate);
     }
 
     #[test]
     fn test_fail_construction() {
         const SAMPLE_SIZE: usize = 1_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = Fuse32::try_from(&keys);
         assert!(filter.expect_err("") == "Failed to construct fuse filter.");

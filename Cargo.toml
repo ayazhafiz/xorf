@@ -1,3 +1,7 @@
+[workspace]
+members = [".", "analysis"]
+resolver = "3"
+
 [package]
 authors = ["ayazhafiz <ayaz.hafiz.1@gmail.com>"]
 categories = ["algorithms", "data-structures", "no-std", "caching"]
@@ -5,41 +9,29 @@ description = """
 Library implementing xor filters - faster and smaller than bloom and cuckoo filters.
 """
 documentation = "https://docs.rs/xorf"
-edition = "2021"
+edition = "2024"
 homepage = "https://github.com/ayazhafiz/xorf"
 keywords = ["xor", "filter", "hash", "hashing"]
 license = "MIT"
 name = "xorf"
 readme = "README.md"
 repository = "https://github.com/ayazhafiz/xorf"
-version = "0.13.0"
+rust-version = "1.85"
+version = "0.14.0"
 
-[badges.is-it-maintained-issue-resolution]
-repository = "ayazhafiz/xorf"
-
-[badges.is-it-maintained-open-issues]
-repository = "ayazhafiz/xorf"
-
-[badges.maintenance]
-status = "actively-developed"
-
-[badges.travis-ci]
-branch = "master"
-repository = "ayazhafiz/xorf"
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
 libm = { version = "0.2.1", optional = true }
-serde = { version = "1.0.104", optional = true, features = ["derive"] }
-serde_bytes = { version = "0.11.12", optional = true }
-bincode = { version = "2.0.0-rc.3", default-features = false, optional = true, features = ["std", "derive"]} 
-num-traits = { version = "0.2.12", optional = true }
-rand = { version = "0.8", optional = true }
+rand = { version = "0.10.2", optional = true }
+serde = { version = "1.0.104", default-features = false, optional = true, features = ["alloc", "derive"] }
+serde_bytes = { version = "0.11.12", default-features = false, optional = true, features = ["alloc"] }
 
 [dev-dependencies]
-criterion = "0.3.0"
-criterion-macro = "0.3.0"
-rand = "0.8"
-bincode = { version = "2.0.0-rc.3", default-features = false, features = ["std", "derive", "serde"]}
+criterion = "0.8.2"
+rand = "0.10.2"
+serde_json = "1.0.151"
 
 [[bench]]
 name = "bfuse32"
@@ -52,7 +44,7 @@ harness = false
 [[bench]]
 name = "bfuse8"
 harness = false
-required-features = ["serde"]
+required-features = ["binary-fuse", "serde"]
 
 [[bench]]
 name = "fuse32"
@@ -80,10 +72,35 @@ harness = false
 
 [features]
 default = ["uniform-random", "binary-fuse"]
-uniform-random = ["rand"]
 binary-fuse = ["libm"]
+# Kept as a manifest-compatible migration shim for users of the former
+# native bincode integration. Serialization is now provided through Serde.
+bincode = ["serde"]
+libm = ["dep:libm"]
+num-traits = []
+rand = ["dep:rand"]
 serde = ["dep:serde", "serde_bytes"]
+serde_bytes = ["dep:serde_bytes"]
+uniform-random = ["rand"]
 
 [[test]]
 name = "boundary_size_construction"
 required-features = ["binary-fuse"]
+
+[[test]]
+name = "serialization_compatibility"
+required-features = ["binary-fuse", "serde"]
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+fallible_impl_from = "allow"
+len_without_is_empty = "allow"
+manual_rotate = "allow"
+multiple_crate_versions = "allow"
+useless_attribute = "allow"
