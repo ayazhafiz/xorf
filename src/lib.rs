@@ -80,6 +80,8 @@ extern crate alloc;
 mod murmur3;
 mod prelude;
 mod splitmix64;
+#[doc(hidden)]
+pub use splitmix64::splitmix64;
 
 #[cfg(feature = "binary-fuse")]
 mod bfuse16;

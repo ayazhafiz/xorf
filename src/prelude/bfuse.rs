@@ -124,14 +124,14 @@ macro_rules! bfuse_from_impl(
 
             let arity = 3u32;
             let size: usize = $keys.len();
-            let segment_length: u32 = segment_length(arity, size as u32).min(262144);
-            let segment_length_mask: u32 = segment_length - 1;
+            let mut segment_length: u32 = segment_length(arity, size as u32).min(262144);
+            let mut segment_length_mask: u32 = segment_length - 1;
             let size_factor: f64 = size_factor(arity, size as u32);
             let capacity: u32 = if size > 1 {
                 round(size as f64 * size_factor) as u32
             } else { 0 };
             let init_segment_count = capacity.div_ceil(segment_length);
-            let (fp_array_len, segment_count) = {
+            let (fp_array_len, mut segment_count) = {
                 let array_len = init_segment_count * segment_length;
                 let segment_count: u32 = {
                     let proposed = array_len.div_ceil(segment_length);
@@ -144,7 +144,7 @@ macro_rules! bfuse_from_impl(
                 let array_len: u32 = (segment_count + arity - 1) * segment_length;
                 (array_len as usize, segment_count)
             };
-            let segment_count_length = segment_count * segment_length;
+            let mut segment_count_length = segment_count * segment_length;
 
             let mut fingerprints: Box<[$fpty]> = make_fp_block!(fp_array_len);
 
@@ -159,20 +159,57 @@ macro_rules! bfuse_from_impl(
             let mut reverse_order: Box<[u64]> = make_block!(with size_plus_1 sets);
             reverse_order[size] = 1;
 
-            let block_bits = {
+            // The empirical segment-length formula is too large just after a
+            // power-of-two step, so peeling rarely succeeds. Every fourth try
+            // keeps the same capacity and uses the previous (halved) length:
+            // https://github.com/FastFilter/xorfilter/pull/50
+            let try_smaller_segment = size > 4 && size < 1_000_000;
+            let start_pos_cap = {
+                let max_segment_count = if try_smaller_segment {
+                    segment_count.saturating_mul(2).saturating_add(2)
+                } else {
+                    segment_count
+                };
                 let mut block_bits = 1;
-                while (1 << block_bits) < segment_count {
+                while (1 << block_bits) < max_segment_count {
                     block_bits += 1;
                 }
-                block_bits
+                1usize << block_bits
             };
-
-            let start_pos_len: usize = 1 << block_bits;
-            let mut start_pos: Box<[usize]> = make_block!(with start_pos_len sets);
+            let mut start_pos: Box<[usize]> = make_block!(with start_pos_cap sets);
             let mut h012: [u32; 6] = [0; 6];
             let mut done = false;
             let mut ultimate_size = 0;
-            for _ in 0..$max_iter {
+            for iter in 0..$max_iter {
+                let iteration = iter + 1;
+                if try_smaller_segment {
+                    match iteration % 4 {
+                        // Same fingerprint array, recut into more, shorter segments.
+                        2 => {
+                            segment_length /= 2;
+                            segment_length_mask = segment_length - 1;
+                            segment_count = segment_count * 2 + 2;
+                            segment_count_length = segment_count * segment_length;
+                        }
+                        3 => {
+                            // Restore the formula layout.
+                            segment_length *= 2;
+                            segment_length_mask = segment_length - 1;
+                            segment_count = segment_count / 2 - 1;
+                            segment_count_length = segment_count * segment_length;
+                        }
+                        _ => {}
+                    }
+                }
+
+                let block_bits = {
+                    let mut block_bits = 1;
+                    while (1 << block_bits) < segment_count {
+                        block_bits += 1;
+                    }
+                    block_bits
+                };
+                let start_pos_len: usize = 1 << block_bits;
                 for i in 0..start_pos_len {
                     start_pos[i] = (((i as u64) * (size as u64)) >> block_bits) as usize;
                 }
@@ -222,6 +259,14 @@ macro_rules! bfuse_from_impl(
                     error = t2count[index1] < 4 || t2count[index2] < 4 || t2count[index3] < 4;
                 }
                 if error {
+                    for i in 0..size {
+                        reverse_order[i] = 0;
+                    }
+                    for i in 0..capacity {
+                        t2count[i] = 0;
+                        t2hash[i] = 0;
+                    }
+                    seed = splitmix64(&mut rng);
                     continue;
                 }
 
