@@ -128,20 +128,6 @@ exposes Binary Fuse filter implementations. This feature pulls in a dependency
 of `libm`, but has no runtime cost. This feature is highly recommended, as
 Binary Fuse filters are the most powerful in the Xor filter family.
 
-## Compatibility
-
-The minimum supported Rust version (MSRV) is 1.85. The CI suite builds the
-complete library API on that compiler and separately checks current stable,
-beta, nightly, and an embedded `no_std` target.
-
-Modernization releases preserve the existing public Rust API, Cargo feature
-names and defaults, and Serde and DMA representations. Version 0.14 removes
-native bincode traits while retaining `bincode` as a Serde-enabling migration
-alias. CI compares the public API with the latest crates.io release to catch
-accidental SemVer breaks. The DMA descriptor is little-endian; 16- and 32-bit
-fingerprint buffers remain native-endian and must meet the documented
-alignment requirements.
-
 ## Development
 
 Development of `xorf` targets the master branch of this repository.
