@@ -27,9 +27,9 @@ use serde::{Deserialize, Serialize};
 /// use xorf::{Filter, Fuse8};
 /// use core::convert::TryFrom;
 /// # use alloc::vec::Vec;
-/// # use rand::RngExt;
+/// # use rand::{RngExt, SeedableRng};
 ///
-/// # let mut rng = rand::rng();
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0x5eed);
 /// const SAMPLE_SIZE: usize = 1_000_000;
 /// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 /// let filter = Fuse8::try_from(&keys).unwrap();
@@ -49,7 +49,7 @@ use serde::{Deserialize, Serialize};
 ///     .filter(|n| filter.contains(n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-/// assert!(fp_rate < 0.45, "False positive rate is {}", fp_rate);
+/// assert!(fp_rate < 0.406, "False positive rate is {}", fp_rate);
 /// ```
 ///
 /// Serializing and deserializing `Fuse8` filters can be enabled with the [`serde`] feature.
@@ -126,7 +126,7 @@ mod test {
     use core::convert::TryFrom;
 
     use alloc::vec::Vec;
-    use rand::RngExt;
+    use rand::{RngExt, SeedableRng};
 
     #[test]
     fn test_initialization() {
@@ -156,7 +156,7 @@ mod test {
     #[test]
     fn test_false_positives() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::rng();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0x5eed);
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = Fuse8::try_from(&keys).unwrap();
@@ -166,7 +166,7 @@ mod test {
             .filter(|n| filter.contains(n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-        assert!(fp_rate < 0.45, "False positive rate is {}", fp_rate);
+        assert!(fp_rate < 0.406, "False positive rate is {}", fp_rate);
     }
 
     #[test]
