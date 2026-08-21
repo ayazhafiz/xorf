@@ -2,12 +2,8 @@
 
 #![allow(deprecated)] // Fuse filters are deprecated
 
-extern crate core;
-extern crate rand;
-extern crate xorf;
-
 use core::convert::TryFrom;
-use rand::Rng;
+use rand::RngExt;
 use xorf::*;
 
 const SIZE: usize = 1_000_000;
@@ -17,7 +13,7 @@ macro_rules! print_zeroes {
         let mut keys: Vec<u64> = Vec::with_capacity(SIZE);
 
         for _ in 0..SIZE {
-            let key: u64 = rand::thread_rng().gen();
+            let key: u64 = rand::rng().random();
             keys.push(key);
         }
         let filter = $filter::try_from(keys).unwrap();

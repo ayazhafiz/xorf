@@ -8,9 +8,6 @@ use libm::{floor, fmax, log};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "bincode")]
-use bincode::{Decode, Encode};
-
 #[inline]
 pub fn segment_length(arity: u32, size: u32) -> u32 {
     if size == 0 {
@@ -54,16 +51,11 @@ pub const fn hash_of_hash(
 
 #[inline]
 pub const fn mod3(x: u8) -> u8 {
-    if x > 2 {
-        x - 3
-    } else {
-        x
-    }
+    if x > 2 { x - 3 } else { x }
 }
 
 /// Descriptor for a binary fuse filter.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Descriptor {
     /// The seed used for hashing keys into the filter.
@@ -77,7 +69,7 @@ pub struct Descriptor {
 }
 
 impl Descriptor {
-    /// Length of the descriptor when serialized with [`DmaSerializable`].
+    /// Length of the descriptor when serialized with [`DmaSerializable`](crate::DmaSerializable).
     pub const DMA_LEN: usize = u64::BITS as usize / 8 + (u32::BITS as usize / 8) * 3;
 }
 

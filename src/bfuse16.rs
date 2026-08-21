@@ -1,18 +1,14 @@
 //! Implements BinaryFuse16 filters.
 
 use crate::{
-    bfuse_contains_impl, bfuse_from_impl,
-    prelude::bfuse::{parse_bfuse_descriptor, serialize_bfuse_descriptor, Descriptor},
-    DmaSerializable, Filter, FilterRef,
+    DmaSerializable, Filter, FilterRef, bfuse_contains_impl, bfuse_from_impl,
+    prelude::bfuse::{Descriptor, parse_bfuse_descriptor, serialize_bfuse_descriptor},
 };
 use alloc::{boxed::Box, vec::Vec};
 use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "bincode")]
-use bincode::{Decode, Encode};
 
 /// A `BinaryFuse16` filter is an Xor-like filter with 16-bit fingerprints arranged in a binary-partitioned [fuse graph].
 ///
@@ -31,11 +27,11 @@ use bincode::{Decode, Encode};
 /// use xorf::{Filter, BinaryFuse16};
 /// use core::convert::TryFrom;
 /// # use alloc::vec::Vec;
-/// # use rand::Rng;
+/// # use rand::{RngExt, SeedableRng};
 ///
-/// # let mut rng = rand::thread_rng();
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0x5eed);
 /// const SAMPLE_SIZE: usize = 1_000_000;
-/// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+/// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 /// let filter = BinaryFuse16::try_from(&keys).unwrap();
 ///
 /// // no false negatives
@@ -49,20 +45,19 @@ use bincode::{Decode, Encode};
 ///
 /// // false positive rate
 /// let false_positives: usize = (0..SAMPLE_SIZE)
-///     .map(|_| rng.gen())
+///     .map(|_| rng.random())
 ///     .filter(|n| filter.contains(n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
 /// assert!(fp_rate < 0.0025, "False positive rate is {}", fp_rate);
 /// ```
 ///
-/// Serializing and deserializing `BinaryFuse16` filters can be enabled with the [`serde`] feature (or [`bincode`] for bincode).
+/// Serializing and deserializing `BinaryFuse16` filters can be enabled with the [`serde`] feature.
 ///
 /// [fuse graph]: https://arxiv.org/abs/1907.04749
 /// [`Fuse16`]: crate::Fuse16
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug, Clone)]
 pub struct BinaryFuse16 {
     /// The descriptor which contains metadata about the filter
@@ -190,17 +185,17 @@ impl<'a> FilterRef<'a, u64> for BinaryFuse16Ref<'a> {
 
 #[cfg(test)]
 mod test {
-    use crate::{bfuse16::BinaryFuse16Ref, BinaryFuse16, DmaSerializable, Filter, FilterRef};
+    use crate::{BinaryFuse16, DmaSerializable, Filter, FilterRef, bfuse16::BinaryFuse16Ref};
     use core::convert::TryFrom;
 
     use alloc::vec::Vec;
-    use rand::Rng;
+    use rand::{RngExt, SeedableRng};
 
     #[test]
     fn test_initialization() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = BinaryFuse16::try_from(&keys).unwrap();
 
@@ -212,8 +207,8 @@ mod test {
     #[test]
     fn test_bits_per_entry() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = BinaryFuse16::try_from(&keys).unwrap();
         let bpe = (filter.len() as f64) * 16.0 / (SAMPLE_SIZE as f64);
@@ -224,13 +219,13 @@ mod test {
     #[test]
     fn test_false_positives() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0x5eed);
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = BinaryFuse16::try_from(&keys).unwrap();
 
         let false_positives: usize = (0..SAMPLE_SIZE)
-            .map(|_| rng.gen())
+            .map(|_| rng.random())
             .filter(|n| filter.contains(n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
@@ -249,8 +244,8 @@ mod test {
     #[test]
     fn test_dma_roundtrip() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = BinaryFuse16::try_from(&keys).unwrap();
 
@@ -270,8 +265,8 @@ mod test {
     #[should_panic(expected = "Invalid fingerprint pointer provided - must be u16 aligned")]
     fn test_dma_unaligned_fingerprints() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = BinaryFuse16::try_from(&keys).unwrap();
 
@@ -291,8 +286,8 @@ mod test {
     )]
     fn test_dma_unaligned_fingerprints_len() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = BinaryFuse16::try_from(&keys).unwrap();
 

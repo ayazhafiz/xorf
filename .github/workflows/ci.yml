@@ -2,133 +2,143 @@ name: Continuous Integration
 
 on:
   push:
-    branches:
-      - master
-    paths:
-      - "**.rs"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - ".github/workflows/*"
+    branches: [master]
   pull_request:
-    branches:
-      - master
-    paths:
-      - "**.rs"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - ".github/workflows/*"
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  fmt:
-    name: Source formatting check
+  quality:
+    name: Format, lint, docs, and package
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1.0.7
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-          components: rustfmt
+          components: clippy, rustfmt
+
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
 
       - name: Check formatting
-        uses: actions-rs/cargo@v1.0.3
-        with:
-          command: fmt
-          args: -- --check
+        run: cargo fmt --all -- --check
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        rust:
-          - stable
-          - nightly
-        features:
-          - "--all-features"
-          - "--no-default-features"
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-      - name: Restore cargo cache
-        uses: actions/cache@v4
+      - name: Run Clippy
+        run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+
+      - name: Check feature combinations
+        run: cargo hack check --locked -p xorf --feature-powerset --depth 2 --lib
+
+      - name: Build documentation
         env:
-          cache-name: ci
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target
-          key: ${{ matrix.os }}-${{ env.cache-name }}-${{ matrix.rust }}-${{ hashFiles('Cargo.lock') }}
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1.0.7
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
-      - name: Build (debug)
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: ${{ matrix.features }}
-      - name: Build (release)
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release ${{ matrix.features }}
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --locked -p xorf --all-features --no-deps
+
+      - name: Verify the publishable package
+        run: cargo package --locked -p xorf
 
   test:
-    name: Lint and test check
+    name: Test (${{ matrix.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        rust:
-          - stable
-          - nightly
+        include:
+          - name: default features
+            args: ""
+          - name: no default features
+            args: --no-default-features
+          - name: all features
+            args: --all-features
+          - name: no_std-compatible features
+            args: --no-default-features --features binary-fuse,serde
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
-      - name: Restore cargo cache
-        uses: actions/cache@v4
-        env:
-          cache-name: ci
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target
-          key: ${{ matrix.os }}-${{ env.cache-name }}-${{ matrix.rust }}-${{ hashFiles('Cargo.lock') }}
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1.0.7
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
-          components: clippy
-
-      - name: Run lints
-        uses: actions-rs/cargo@v1.0.3
-        with:
-          command: clippy
-          args: -- -D warnings
-
-      - name: Run tests (no default features)
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --no-default-features
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Run tests
-        uses: actions-rs/cargo@v1.0.3
+        run: cargo test --locked -p xorf ${{ matrix.args }}
+
+  msrv:
+    name: Minimum supported Rust 1.85
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+
+      - name: Install Rust 1.85
+        uses: dtolnay/rust-toolchain@1.85.0
+
+      - name: Check the complete library API
+        run: cargo check --locked -p xorf --lib --all-features
+
+  no-std:
+    name: no_std + alloc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+
+      - name: Install stable Rust and an embedded target
+        uses: dtolnay/rust-toolchain@stable
         with:
-          command: test
+          targets: thumbv7em-none-eabi
+
+      - name: Check without default features
+        run: cargo check --locked -p xorf --target thumbv7em-none-eabi --no-default-features
+
+      - name: Check all no_std-compatible features
+        run: >-
+          cargo check --locked -p xorf --target thumbv7em-none-eabi
+          --no-default-features --features binary-fuse,serde
+
+  semver:
+    name: Public API compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+
+      - name: Check against the latest crates.io release
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          package: xorf
+          feature-group: all-features
+
+  future-rust:
+    name: Future Rust (${{ matrix.toolchain }})
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: [beta, nightly]
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+
+      - name: Install Rust ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+
+      - name: Check the workspace
+        run: cargo check --locked --workspace --all-features

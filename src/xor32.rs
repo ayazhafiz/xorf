@@ -2,14 +2,11 @@
 //!
 //! [Xor Filters: Faster and Smaller Than Bloom and Cuckoo Filters]: https://arxiv.org/abs/1912.08258
 
-use crate::{xor_contains_impl, xor_from_impl, Filter};
+use crate::{Filter, xor_contains_impl, xor_from_impl};
 use alloc::{boxed::Box, vec::Vec};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "bincode")]
-use bincode::{Decode, Encode};
 
 /// Xor filter using 32-bit fingerprints.
 ///
@@ -23,11 +20,11 @@ use bincode::{Decode, Encode};
 /// # extern crate alloc;
 /// use xorf::{Filter, Xor32};
 /// # use alloc::vec::Vec;
-/// # use rand::Rng;
+/// # use rand::{RngExt, SeedableRng};
 ///
-/// # let mut rng = rand::thread_rng();
+/// # let mut rng = rand::rngs::StdRng::seed_from_u64(0x5eed);
 /// const SAMPLE_SIZE: usize = 1_000_000;
-/// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+/// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 /// let filter = Xor32::from(&keys);
 ///
 /// // no false negatives
@@ -41,18 +38,17 @@ use bincode::{Decode, Encode};
 ///
 /// // false positive rate
 /// let false_positives: usize = (0..SAMPLE_SIZE)
-///     .map(|_| rng.gen())
+///     .map(|_| rng.random())
 ///     .filter(|n| filter.contains(n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
 /// assert!(fp_rate < 0.0000000000000001, "False positive rate is {}", fp_rate);
 /// ```
 ///
-/// Serializing and deserializing `Xor32` filters can be enabled with the [`serde`] feature  (or [`bincode`] for bincode).
+/// Serializing and deserializing `Xor32` filters can be enabled with the [`serde`] feature.
 ///
 /// [`serde`]: http://serde.rs
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "bincode", derive(Encode, Decode))]
 #[derive(Debug, Clone)]
 pub struct Xor32 {
     /// The seed for the filter
@@ -112,13 +108,13 @@ mod test {
     use crate::{Filter, Xor32};
 
     use alloc::vec::Vec;
-    use rand::Rng;
+    use rand::{RngExt, SeedableRng};
 
     #[test]
     fn test_initialization() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = Xor32::from(&keys);
 
@@ -130,8 +126,8 @@ mod test {
     #[test]
     fn test_bits_per_entry() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rng();
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = Xor32::from(&keys);
         let bpe = (filter.len() as f64) * 32.0 / (SAMPLE_SIZE as f64);
@@ -150,13 +146,13 @@ mod test {
     // but has not been tested / verified.
     fn test_false_positives() {
         const SAMPLE_SIZE: usize = 1_000_000_000;
-        let mut rng = rand::thread_rng();
-        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0x5eed);
+        let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.random()).collect();
 
         let filter = Xor32::from(&keys);
 
         let false_positives: usize = (0..SAMPLE_SIZE)
-            .map(|_| rng.gen())
+            .map(|_| rng.random())
             .filter(|n| filter.contains(n))
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
