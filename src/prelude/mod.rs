@@ -7,6 +7,7 @@ pub mod xor;
 
 use crate::murmur3;
 
+#[cfg(feature = "binary-fuse")]
 pub use bfuse::Descriptor;
 
 /// A set of hashes indexing three blocks.
