@@ -173,6 +173,16 @@ macro_rules! bfuse_from_impl(
             let mut done = false;
             let mut ultimate_size = 0;
             for iter in 0..$max_iter {
+                // Repeated keys make every try fail, so after eight failures rebuild from
+                // the deduplicated keys. Distinct keys only pay for the check.
+                if iter == 8 {
+                    let mut distinct: Vec<u64> = $keys.clone().collect();
+                    distinct.sort_unstable();
+                    distinct.dedup();
+                    if distinct.len() != size {
+                        return Self::try_from_iterator(distinct.into_iter());
+                    }
+                }
                 let iteration = iter + 1;
                 if try_smaller_segment {
                     match iteration % 4 {
