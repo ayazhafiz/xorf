@@ -70,6 +70,30 @@ impl Filter<u64> for Xor16 {
     }
 }
 
+/// A borrowed [`Xor16`] backed by caller-owned fingerprints.
+///
+/// The seed, block length and fingerprints must come from the same filter.
+/// Queries use the same implementation as the owning [`Xor16`].
+#[derive(Debug, Clone)]
+pub struct Xor16Ref<'a> {
+    /// The seed for the filter.
+    pub seed: u64,
+    /// The length of each of the filter's three fingerprint blocks.
+    pub block_length: usize,
+    /// The fingerprints for the filter.
+    pub fingerprints: &'a [u16],
+}
+
+impl Filter<u64> for Xor16Ref<'_> {
+    fn contains(&self, key: &u64) -> bool {
+        xor_contains_impl!(*key, self, fingerprint u16)
+    }
+
+    fn len(&self) -> usize {
+        self.fingerprints.len()
+    }
+}
+
 impl Xor16 {
     /// Construct the filter from a key iterator. Can be used directly
     /// if you don't have a contiguous array of u64 keys.
