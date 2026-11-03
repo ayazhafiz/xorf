@@ -1,6 +1,6 @@
-//! Borrowed XOR readers preserve owning-reader behavior on pooled fingerprint slices.
+//! Borrowed XOR readers preserve owning-reader behavior for pooled and owned fingerprints.
 
-use xorf::{Filter, Xor8, Xor8Ref, Xor16, Xor16Ref};
+use xorf::{Filter, Xor8, Xor8Ref, Xor16, Xor16Ref, Xor32, Xor32Ref};
 
 macro_rules! check_borrowed {
     ($owned:ident, $borrowed:ident) => {
@@ -18,15 +18,28 @@ macro_rules! check_borrowed {
                 block_length: owned.block_length,
                 fingerprints: &pool[7..7 + owned.fingerprints.len()],
             };
-            assert_eq!(borrowed.len(), owned.len());
+            let from_owned = $borrowed::from(&owned);
+            assert!(std::ptr::eq(
+                from_owned.fingerprints,
+                owned.fingerprints.as_ref()
+            ));
+            // Reusing the array by value also exercises the Copy API.
+            let readers = [borrowed, from_owned];
+            for reader in readers {
+                assert_eq!(reader.len(), owned.len());
+            }
             for key in &keys {
-                assert!(borrowed.contains(key));
+                for reader in readers {
+                    assert!(reader.contains(key));
+                }
             }
             for key in (0..4096_u64)
                 .map(|key| key.wrapping_mul(0xd6e8_feb8_6659_fd93))
                 .chain([u64::MAX])
             {
-                assert_eq!(borrowed.contains(&key), owned.contains(&key));
+                for reader in readers {
+                    assert_eq!(reader.contains(&key), owned.contains(&key));
+                }
             }
         }
     };
@@ -40,4 +53,9 @@ fn xor8_borrows_pooled_fingerprints() {
 #[test]
 fn xor16_borrows_pooled_fingerprints() {
     check_borrowed!(Xor16, Xor16Ref);
+}
+
+#[test]
+fn xor32_borrows_pooled_fingerprints() {
+    check_borrowed!(Xor32, Xor32Ref);
 }

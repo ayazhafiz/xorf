@@ -75,7 +75,9 @@ impl Filter<u64> for Xor8 {
 ///
 /// The seed, block length and fingerprints must come from the same filter.
 /// Queries use the same implementation as the owning [`Xor8`].
-#[derive(Debug, Clone)]
+///
+/// Use `Xor8Ref::from(&filter)` to borrow an owned filter without allocating.
+#[derive(Debug, Clone, Copy)]
 pub struct Xor8Ref<'a> {
     /// The seed for the filter.
     pub seed: u64,
@@ -83,6 +85,16 @@ pub struct Xor8Ref<'a> {
     pub block_length: usize,
     /// The fingerprints for the filter.
     pub fingerprints: &'a [u8],
+}
+
+impl<'a> From<&'a Xor8> for Xor8Ref<'a> {
+    fn from(filter: &'a Xor8) -> Self {
+        Self {
+            seed: filter.seed,
+            block_length: filter.block_length,
+            fingerprints: &filter.fingerprints,
+        }
+    }
 }
 
 impl Filter<u64> for Xor8Ref<'_> {

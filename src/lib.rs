@@ -113,7 +113,7 @@ pub use hash_proxy::HashProxy;
 pub use prelude::Descriptor;
 pub use xor8::{Xor8, Xor8Ref};
 pub use xor16::{Xor16, Xor16Ref};
-pub use xor32::Xor32;
+pub use xor32::{Xor32, Xor32Ref};
 
 /// Methods common to xor filters.
 pub trait Filter<Type> {
