@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 /// the bits per entry but increases the false positive rate.
 ///
 /// A `BinaryFuse16` is constructed from a set of 64-bit unsigned integers and is immutable.
-/// Construction may fail, but usually only if there are duplicate keys.
+/// Duplicate keys are tolerated, at the cost of a sort and dedup during construction.
 ///
 /// ```
 /// # extern crate alloc;
@@ -233,12 +233,9 @@ mod test {
     }
 
     #[test]
-    #[cfg(debug_assertions)]
-    #[should_panic(
-        expected = "Binary Fuse filters must be constructed from a collection containing all distinct keys."
-    )]
-    fn test_debug_assert_duplicates() {
-        let _ = BinaryFuse16::try_from(vec![1, 2, 1]);
+    fn test_duplicates() {
+        let filter = BinaryFuse16::try_from(vec![1, 2, 1]).unwrap();
+        assert!([1, 2].iter().all(|key| filter.contains(key)));
     }
 
     #[test]

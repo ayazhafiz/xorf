@@ -109,13 +109,8 @@ macro_rules! bfuse_from_impl(
                 splitmix64::splitmix64,
             };
 
-            #[cfg(debug_assertions)] {
-                use $crate::prelude::all_distinct;
-                debug_assert!(all_distinct($keys.clone()), "Binary Fuse filters must be constructed from a collection containing all distinct keys.");
-            }
-
             let arity = 3u32;
-            let size: usize = $keys.len();
+            let mut size: usize = $keys.len();
             let mut segment_length: u32 = segment_length(arity, size as u32).min(262144);
             let mut segment_length_mask: u32 = segment_length - 1;
             let size_factor: f64 = size_factor(arity, size as u32);
@@ -172,17 +167,9 @@ macro_rules! bfuse_from_impl(
             let mut h012: [u32; 6] = [0; 6];
             let mut done = false;
             let mut ultimate_size = 0;
+            // Set once a failed try saw duplicate keys; later tries use these instead of `$keys`.
+            let mut distinct: Option<alloc::vec::Vec<u64>> = None;
             for iter in 0..$max_iter {
-                // Repeated keys make every try fail, so after eight failures rebuild from
-                // the deduplicated keys. Distinct keys only pay for the check.
-                if iter == 8 {
-                    let mut distinct: Vec<u64> = $keys.clone().collect();
-                    distinct.sort_unstable();
-                    distinct.dedup();
-                    if distinct.len() != size {
-                        return Self::try_from_iterator(distinct.into_iter());
-                    }
-                }
                 let iteration = iter + 1;
                 if try_smaller_segment {
                     match iteration % 4 {
@@ -215,7 +202,7 @@ macro_rules! bfuse_from_impl(
                 for i in 0..start_pos_len {
                     start_pos[i] = (((i as u64) * (size as u64)) >> block_bits) as usize;
                 }
-                for key in $keys.clone() {
+                let mut add_key = |key: u64| {
                     let hash = mix(key, seed);
                     let mut segment_index = hash >> (64 - block_bits);
                     while reverse_order[start_pos[segment_index as usize] as usize] != 0 {
@@ -224,6 +211,10 @@ macro_rules! bfuse_from_impl(
                     }
                     reverse_order[start_pos[segment_index as usize] as usize] = hash;
                     start_pos[segment_index as usize] += 1;
+                };
+                match &distinct {
+                    Some(keys) => keys.iter().copied().for_each(&mut add_key),
+                    None => $keys.clone().for_each(&mut add_key),
                 }
 
                 let mut error = false;
@@ -332,6 +323,16 @@ macro_rules! bfuse_from_impl(
                 for i in 0..capacity {
                     t2count[i] = 0;
                     t2hash[i] = 0;
+                }
+                // Like the C and Go implementations: if this try saw duplicate keys, retry
+                // from the distinct keys. The buffers sized for the original keys still fit.
+                if duplicates > 0 {
+                    let mut keys: alloc::vec::Vec<u64> = $keys.clone().collect();
+                    keys.sort_unstable();
+                    keys.dedup();
+                    size = keys.len();
+                    reverse_order[size] = 1;
+                    distinct = Some(keys);
                 }
                 seed = splitmix64(&mut rng)
             }
