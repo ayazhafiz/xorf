@@ -71,6 +71,42 @@ impl Filter<u64> for Xor8 {
     }
 }
 
+/// A borrowed [`Xor8`] backed by caller-owned fingerprints.
+///
+/// The seed, block length and fingerprints must come from the same filter.
+/// Queries use the same implementation as the owning [`Xor8`].
+///
+/// Use `Xor8Ref::from(&filter)` to borrow an owned filter without allocating.
+#[derive(Debug, Clone, Copy)]
+pub struct Xor8Ref<'a> {
+    /// The seed for the filter.
+    pub seed: u64,
+    /// The length of each of the filter's three fingerprint blocks.
+    pub block_length: usize,
+    /// The fingerprints for the filter.
+    pub fingerprints: &'a [u8],
+}
+
+impl<'a> From<&'a Xor8> for Xor8Ref<'a> {
+    fn from(filter: &'a Xor8) -> Self {
+        Self {
+            seed: filter.seed,
+            block_length: filter.block_length,
+            fingerprints: &filter.fingerprints,
+        }
+    }
+}
+
+impl Filter<u64> for Xor8Ref<'_> {
+    fn contains(&self, key: &u64) -> bool {
+        xor_contains_impl!(*key, self, fingerprint u8)
+    }
+
+    fn len(&self) -> usize {
+        self.fingerprints.len()
+    }
+}
+
 impl Xor8 {
     /// Construct the filter from a key iterator. Can be used directly
     /// if you don't have a contiguous array of u64 keys.

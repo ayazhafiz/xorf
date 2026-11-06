@@ -111,9 +111,9 @@ pub use fuse32::Fuse32;
 pub use hash_proxy::HashProxy;
 #[cfg(feature = "binary-fuse")]
 pub use prelude::Descriptor;
-pub use xor8::Xor8;
-pub use xor16::Xor16;
-pub use xor32::Xor32;
+pub use xor8::{Xor8, Xor8Ref};
+pub use xor16::{Xor16, Xor16Ref};
+pub use xor32::{Xor32, Xor32Ref};
 
 /// Methods common to xor filters.
 pub trait Filter<Type> {
