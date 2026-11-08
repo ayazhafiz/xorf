@@ -32,9 +32,9 @@
 //! ## General considerations for all filters
 //!
 //! It is highly recommended to use the `BinaryFuse` family of xor-like filters. `BinaryFuse`
-//! filters can fail to construct, but almost always only if they are constructed with duplicate
-//! keys. If you need a filter that will unconditionally succeed in construction (up to duplicate
-//! keys), use the `Xor` family of filters.
+//! filters can fail to construct, though very rarely. If you need a filter that will
+//! unconditionally succeed in construction (up to duplicate keys), use the `Xor` family of
+//! filters.
 //!
 //! For a given `N`, a `BinaryFuseN` and `FuseN` filter are roughly equivalent in size, uniformity
 //! of key distribution, and false-positive rate.
@@ -50,9 +50,10 @@
 //!
 //! ### Assumed pre-conditions
 //!
-//! - It is a pre-condition that all filters are constructed from a data structure containing no
-//!   duplicate keys. You must perform any de-duplication needed yourself before constructing a
-//!   filter.
+//! - Binary Fuse filters tolerate duplicate keys, at the cost of a sort and dedup during
+//!   construction. The filter is still sized for the total key count, duplicates included, so
+//!   de-duplicate first if memory matters. Xor and Fuse filters still require distinct keys: you must perform any
+//!   de-duplication needed yourself before constructing one.
 //!
 //! ## FAQ
 //!

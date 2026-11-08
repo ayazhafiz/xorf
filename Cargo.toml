@@ -88,6 +88,10 @@ name = "boundary_size_construction"
 required-features = ["binary-fuse"]
 
 [[test]]
+name = "repeated_keys"
+required-features = ["binary-fuse"]
+
+[[test]]
 name = "serialization_compatibility"
 required-features = ["binary-fuse", "serde"]
 

@@ -109,13 +109,8 @@ macro_rules! bfuse_from_impl(
                 splitmix64::splitmix64,
             };
 
-            #[cfg(debug_assertions)] {
-                use $crate::prelude::all_distinct;
-                debug_assert!(all_distinct($keys.clone()), "Binary Fuse filters must be constructed from a collection containing all distinct keys.");
-            }
-
             let arity = 3u32;
-            let size: usize = $keys.len();
+            let mut size: usize = $keys.len();
             let mut segment_length: u32 = segment_length(arity, size as u32).min(262144);
             let mut segment_length_mask: u32 = segment_length - 1;
             let size_factor: f64 = size_factor(arity, size as u32);
@@ -172,8 +167,28 @@ macro_rules! bfuse_from_impl(
             let mut h012: [u32; 6] = [0; 6];
             let mut done = false;
             let mut ultimate_size = 0;
+            // Set once a failed try saw duplicate keys; later tries use these instead of `$keys`.
+            let mut distinct: Option<alloc::vec::Vec<u64>> = None;
+            let mut saw_duplicates = false;
             for iter in 0..$max_iter {
                 let iteration = iter + 1;
+                if iter > 0 {
+                    // The previous try failed; reset for a retry.
+                    reverse_order[..size].fill(0);
+                    t2count.fill(0);
+                    t2hash.fill(0);
+                    // Like the C and Go implementations: if a try saw duplicate keys, retry
+                    // from the distinct keys. The buffers sized for the original keys still fit.
+                    if saw_duplicates && distinct.is_none() {
+                        let mut keys: alloc::vec::Vec<u64> = $keys.clone().collect();
+                        keys.sort_unstable();
+                        keys.dedup();
+                        size = keys.len();
+                        reverse_order[size] = 1;
+                        distinct = Some(keys);
+                    }
+                    seed = splitmix64(&mut rng);
+                }
                 if try_smaller_segment {
                     match iteration % 4 {
                         // Same fingerprint array, recut into more, shorter segments.
@@ -205,7 +220,7 @@ macro_rules! bfuse_from_impl(
                 for i in 0..start_pos_len {
                     start_pos[i] = (((i as u64) * (size as u64)) >> block_bits) as usize;
                 }
-                for key in $keys.clone() {
+                let mut add_key = |key: u64| {
                     let hash = mix(key, seed);
                     let mut segment_index = hash >> (64 - block_bits);
                     while reverse_order[start_pos[segment_index as usize] as usize] != 0 {
@@ -214,6 +229,10 @@ macro_rules! bfuse_from_impl(
                     }
                     reverse_order[start_pos[segment_index as usize] as usize] = hash;
                     start_pos[segment_index as usize] += 1;
+                };
+                match &distinct {
+                    Some(keys) => keys.iter().copied().for_each(&mut add_key),
+                    None => $keys.clone().for_each(&mut add_key),
                 }
 
                 let mut error = false;
@@ -222,13 +241,13 @@ macro_rules! bfuse_from_impl(
                     let hash = reverse_order[i];
                     let (index1, index2, index3) = hash_of_hash(hash, segment_length, segment_length_mask, segment_count_length);
                     let (index1, index2, index3) = (index1 as usize, index2 as usize, index3 as usize);
-                    t2count[index1] += 4;
+                    t2count[index1] = t2count[index1].wrapping_add(4);
                     // t2count[index1] ^= 0; NOOP
                     t2hash[index1] ^= hash;
-			              t2count[index2] += 4;
+			              t2count[index2] = t2count[index2].wrapping_add(4);
 			              t2count[index2] ^= 1;
 			              t2hash[index2] ^= hash;
-			              t2count[index3] += 4;
+			              t2count[index3] = t2count[index3].wrapping_add(4);
 			              t2count[index3] ^= 2;
 			              t2hash[index3] ^= hash;
 
@@ -237,28 +256,22 @@ macro_rules! bfuse_from_impl(
                            ((t2hash[index2] == 0) && (t2count[index2] == 8)) ||
                            ((t2hash[index3] == 0) && (t2count[index3] == 8)) {
                                 duplicates += 1;
-                                t2count[index1] -= 4;
+                                t2count[index1] = t2count[index1].wrapping_sub(4);
                                 // t2count[index1] ^= 0; NOOP
                                 t2hash[index1] ^= hash;
-                                t2count[index2] -= 4;
+                                t2count[index2] = t2count[index2].wrapping_sub(4);
                                 t2count[index2] ^= 1;
 					                      t2hash[index2] ^= hash;
-					                      t2count[index3] -= 4;
+					                      t2count[index3] = t2count[index3].wrapping_sub(4);
 					                      t2count[index3] ^= 2;
 					                      t2hash[index3] ^= hash;
                         }
                     }
-                    error = t2count[index1] < 4 || t2count[index2] < 4 || t2count[index3] < 4;
+                    // A counter below 4 wrapped, which only many copies of one key cause.
+                    error |= t2count[index1] < 4 || t2count[index2] < 4 || t2count[index3] < 4;
                 }
                 if error {
-                    for i in 0..size {
-                        reverse_order[i] = 0;
-                    }
-                    for i in 0..capacity {
-                        t2count[i] = 0;
-                        t2hash[i] = 0;
-                    }
-                    seed = splitmix64(&mut rng);
+                    saw_duplicates = true;
                     continue;
                 }
 
@@ -315,15 +328,7 @@ macro_rules! bfuse_from_impl(
                     break
                 }
 
-                // Filter failed to be created; reset for a retry.
-                for i in 0..size {
-                    reverse_order[i] = 0;
-                }
-                for i in 0..capacity {
-                    t2count[i] = 0;
-                    t2hash[i] = 0;
-                }
-                seed = splitmix64(&mut rng)
+                saw_duplicates |= duplicates > 0;
             }
             if !done {
                 return Err("Failed to construct binary fuse filter.");
