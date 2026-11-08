@@ -175,8 +175,8 @@ macro_rules! bfuse_from_impl(
                 if iter > 0 {
                     // The previous try failed; reset for a retry.
                     reverse_order[..size].fill(0);
-                    t2count[..capacity].fill(0);
-                    t2hash[..capacity].fill(0);
+                    t2count.fill(0);
+                    t2hash.fill(0);
                     // Like the C and Go implementations: if a try saw duplicate keys, retry
                     // from the distinct keys. The buffers sized for the original keys still fit.
                     if saw_duplicates && distinct.is_none() {
