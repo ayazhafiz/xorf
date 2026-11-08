@@ -20,7 +20,9 @@ use serde::{Deserialize, Serialize};
 /// the bits per entry but increases the false positive rate.
 ///
 /// A `BinaryFuse8` is constructed from a set of 64-bit unsigned integers and is immutable.
-/// Duplicate keys are tolerated, at the cost of a sort and dedup during construction.
+/// Duplicate keys are tolerated, at the cost of a sort and dedup during construction. The filter
+/// is still sized for the total key count, duplicates included, so `[7; 1000]` allocates as
+/// much as 1,000 distinct keys.
 ///
 /// ```
 /// # extern crate alloc;

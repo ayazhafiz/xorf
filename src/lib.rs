@@ -51,7 +51,8 @@
 //! ### Assumed pre-conditions
 //!
 //! - Binary Fuse filters tolerate duplicate keys, at the cost of a sort and dedup during
-//!   construction. Xor and Fuse filters still require distinct keys: you must perform any
+//!   construction. The filter is still sized for the total key count, duplicates included, so
+//!   de-duplicate first if memory matters. Xor and Fuse filters still require distinct keys: you must perform any
 //!   de-duplication needed yourself before constructing one.
 //!
 //! ## FAQ
